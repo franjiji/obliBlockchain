@@ -1,0 +1,30 @@
+# Dependencias
+node_modules/
+
+# Hardhat
+artifacts/
+cache/
+typechain-types/
+coverage/
+coverage.json
+ignition/deployments/chain-31337/
+
+# Frontend
+frontend/dist/
+frontend/.vite/
+
+# Secretos: NUNCA commitear claves privadas ni API keys
+.env
+.env.*
+!.env.example
+
+# Sistema / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.log
+
+# Entrega
+*.zip
+*.rar
