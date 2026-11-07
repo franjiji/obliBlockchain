@@ -5,6 +5,7 @@ node_modules/
 artifacts/
 cache/
 typechain-types/
+types/
 coverage/
 coverage.json
 ignition/deployments/chain-31337/
@@ -12,6 +13,8 @@ ignition/deployments/chain-31337/
 # Frontend
 frontend/dist/
 frontend/.vite/
+# Generado por scripts/deploy.js (depende de la red)
+frontend/src/contracts/deployment.json
 
 # Secretos: NUNCA commitear claves privadas ni API keys
 .env
