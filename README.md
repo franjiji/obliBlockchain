@@ -29,7 +29,11 @@ docs/        Documento de arquitectura, declaración de uso de IA y letra
 
 ## Instalación
 
-_(pendiente: se completa al armar el proyecto Hardhat y el frontend)_
+```bash
+npm install          # contratos: Hardhat 3 + OpenZeppelin
+```
+
+_(frontend: pendiente)_
 
 ## Desplegar contratos
 
@@ -41,7 +45,10 @@ _(pendiente)_
 
 ## Correr tests y coverage
 
-_(pendiente)_
+```bash
+npx hardhat test              # compila y corre los tests
+npx hardhat test --coverage   # tests + reporte de cobertura de líneas
+```
 
 ## Documentación
 
