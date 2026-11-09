@@ -4,16 +4,16 @@ import { errorMessage } from "./format.js";
 const Ctx = createContext(null);
 export const useTx = () => useContext(Ctx);
 
-const POLL_MS = 15000;
+const POLL_MS = 30000;
 
 export function TxProvider({ children }) {
   const [txs, setTxs] = useState([]); // { id, label, status: pending | confirmed | failed, hash, error }
   const [refreshKey, setRefreshKey] = useState(0);
   const nextId = useRef(1);
 
-  // Refresco periodico: el devengado crece con el tiempo aunque nadie transaccione.
+  // Refresco periodico (solo con la pestaña visible, para no gastar cuota del RPC): el devengado crece con el tiempo.
   useEffect(() => {
-    const t = setInterval(() => setRefreshKey((k) => k + 1), POLL_MS);
+    const t = setInterval(() => !document.hidden && setRefreshKey((k) => k + 1), POLL_MS);
     return () => clearInterval(t);
   }, []);
 

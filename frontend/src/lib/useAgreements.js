@@ -4,7 +4,7 @@ import { useTx } from "./tx.jsx";
 import { fetchAgreements } from "./agreements.js";
 import { errorMessage } from "./format.js";
 
-/** role: "payer" (acuerdos creados) | "beneficiary" (mis ingresos). Se recarga tras cada tx y cada 15 s. */
+/** role: "payer" (acuerdos creados) | "beneficiary" (mis ingresos). Se recarga tras cada tx y cada 30 s. */
 export function useAgreements(role) {
   const { provider, account, chainOk } = useWallet();
   const { refreshKey } = useTx();
