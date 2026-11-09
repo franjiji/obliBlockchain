@@ -4,7 +4,7 @@ import { useWallet } from "../lib/wallet.jsx";
 import { useTx } from "../lib/tx.jsx";
 import { deployment } from "../lib/config.js";
 import { tokenContract, tokenInfo, vestingContract } from "../lib/agreements.js";
-import { formatAmount, toLocalInput, toTimestamp } from "../lib/format.js";
+import { formatAmount, formatDate, formatDuration, toLocalInput, toTimestamp } from "../lib/format.js";
 
 const MAX_UINT128 = 2n ** 128n - 1n;
 
@@ -41,6 +41,15 @@ export default function CreateAgreement({ onCreated }) {
     };
   }, [provider, account, token, refreshKey]);
 
+  // Resumen de fechas en el mismo formato que el resto de la dApp (el selector del navegador usa el idioma del sistema).
+  const startTs = toTimestamp(start);
+  const endTs = toTimestamp(end);
+  const nowTs = Math.floor(Date.now() / 1000);
+  const datesOk = Boolean(startTs && endTs && endTs > startTs);
+  const warnings = [];
+  if (datesOk && endTs <= nowTs) warnings.push("La fecha de fin ya pasó: el beneficiario podrá reclamar todo el monto de inmediato.");
+  else if (datesOk && startTs < nowTs) warnings.push("El inicio ya pasó: parte del monto ya queda disponible apenas se crea el acuerdo.");
+
   const faucet = () =>
     send("Obtener mUSD de prueba", async () => tokenContract(token, await provider.getSigner()).mint(account, 1000n * 10n ** 6n));
 
@@ -57,8 +66,6 @@ export default function CreateAgreement({ onCreated }) {
     }
     if (total <= 0n) return setFormError("El monto debe ser mayor a cero.");
     if (total > MAX_UINT128) return setFormError("El monto excede el máximo soportado.");
-    const startTs = toTimestamp(start);
-    const endTs = toTimestamp(end);
     if (!startTs || !endTs) return setFormError("Completá las fechas de inicio y fin.");
     if (endTs <= startTs) return setFormError("La fecha de fin debe ser posterior a la de inicio.");
 
@@ -128,6 +135,17 @@ export default function CreateAgreement({ onCreated }) {
           <input type="datetime-local" value={end} onChange={(e) => setEnd(e.target.value)} />
         </label>
       </div>
+
+      <p className="muted">
+        {datesOk
+          ? `Se vestea desde ${formatDate(startTs)} hasta ${formatDate(endTs)} (${formatDuration(endTs - startTs)}).`
+          : "La fecha de fin debe ser posterior a la de inicio."}
+      </p>
+      {warnings.map((w) => (
+        <p key={w} className="warn">
+          ⚠ {w}
+        </p>
+      ))}
 
       <label className="check">
         <input type="checkbox" checked={revocable} onChange={(e) => setRevocable(e.target.checked)} />

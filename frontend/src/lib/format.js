@@ -13,7 +13,23 @@ export function formatAmount(value, decimals, symbol = "", maxFrac = decimals) {
   return `${i}${f ? "," + f : ""}${symbol ? " " + symbol : ""}`;
 }
 
-export const formatDate = (ts) => new Date(Number(ts) * 1000).toLocaleString("es-UY");
+// Formato fijo dd/mm/aaaa HH:mm (24 h), el mismo en toda la dApp.
+export function formatDate(ts) {
+  const d = new Date(Number(ts) * 1000);
+  const p = (n) => String(n).padStart(2, "0");
+  return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+// Duración legible entre dos timestamps (segundos).
+export function formatDuration(seconds) {
+  const s = Math.max(0, Number(seconds));
+  const d = Math.floor(s / 86400);
+  const h = Math.floor((s % 86400) / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  if (d > 0) return h > 0 ? `${d} d ${h} h` : `${d} d`;
+  if (h > 0) return m > 0 ? `${h} h ${m} min` : `${h} h`;
+  return `${m} min`;
+}
 
 export function toLocalInput(date) {
   const p = (n) => String(n).padStart(2, "0");
