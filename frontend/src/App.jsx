@@ -33,7 +33,7 @@ function TxList() {
 }
 
 export default function App() {
-  const { hasWallet, account, chainName, chainOk, expectedChainName, error, connect, switchNetwork } = useWallet();
+  const { hasWallet, account, chainName, chainOk, expectedChainName, error, connecting, connect, switchNetwork } = useWallet();
   const [tab, setTab] = useState("create");
   const [detailId, setDetailId] = useState(null);
 
@@ -42,7 +42,7 @@ export default function App() {
 
   let content;
   if (!hasWallet) content = <div className="card">No se detectó una billetera EVM. Instalá MetaMask para usar la dApp.</div>;
-  else if (!account) content = <div className="card"><p>Conectá tu billetera para empezar.</p><button className="primary" onClick={connect}>Conectar billetera</button></div>;
+  else if (!account) content = <div className="card"><p>Conectá tu billetera para empezar.</p><button className="primary" onClick={connect} disabled={connecting}>{connecting ? "Esperando a la billetera…" : "Conectar billetera"}</button></div>;
   else if (!chainOk) content = <div className="card"><p className="error">Estás en la red «{chainName}», pero la dApp está desplegada en «{expectedChainName}».</p><button className="primary" onClick={switchNetwork}>Cambiar a {expectedChainName}</button></div>;
   else if (tab === "detail") content = <Detail id={detailId} onBack={() => goTab("created")} />;
   else if (tab === "create") content = <CreateAgreement onCreated={() => goTab("created")} />;
@@ -61,7 +61,7 @@ export default function App() {
               <code title={account}>{shortAddr(account)}</code>
             </>
           ) : (
-            hasWallet && <button onClick={connect}>Conectar billetera</button>
+            hasWallet && <button onClick={connect} disabled={connecting}>{connecting ? "Esperando a la billetera…" : "Conectar billetera"}</button>
           )}
         </div>
       </header>

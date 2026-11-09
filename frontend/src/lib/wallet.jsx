@@ -10,6 +10,7 @@ export function WalletProvider({ children }) {
   const [account, setAccount] = useState(null);
   const [chainId, setChainId] = useState(null);
   const [error, setError] = useState(null);
+  const [connecting, setConnecting] = useState(false);
   const eth = window.ethereum;
 
   // Se crea un BrowserProvider nuevo en cada cambio: ethers falla si se reusa tras cambiar de red.
@@ -21,6 +22,7 @@ export function WalletProvider({ children }) {
     setProvider(bp);
     setChainId(Number(net.chainId));
     setAccount(accounts[0] ? getAddress(accounts[0]) : null);
+    if (accounts[0]) setError(null); // ya conectada: se limpia un error viejo (p. ej. "solicitud pendiente")
   }, [eth]);
 
   useEffect(() => {
@@ -35,12 +37,18 @@ export function WalletProvider({ children }) {
   }, [eth, sync]);
 
   const connect = useCallback(async () => {
+    setConnecting(true);
     try {
       setError(null);
       await eth.request({ method: "eth_requestAccounts" });
       await sync();
     } catch (e) {
-      setError(e.code === 4001 ? "Conexión rechazada en la billetera." : e.message);
+      if (e.code === 4001) setError("Conexión rechazada en la billetera.");
+      else if (e.code === -32002 || /already pending/i.test(e.message ?? ""))
+        setError("Ya hay una solicitud pendiente: abrí la extensión MetaMask (ícono en la barra del navegador) y aceptá o rechazá la conexión.");
+      else setError(e.message);
+    } finally {
+      setConnecting(false);
     }
   }, [eth, sync]);
 
@@ -67,10 +75,11 @@ export function WalletProvider({ children }) {
       chainOk: chainId === deployment.chainId,
       expectedChainName: NETWORK_NAMES[deployment.chainId] ?? `Red ${deployment.chainId}`,
       error,
+      connecting,
       connect,
       switchNetwork,
     }),
-    [eth, provider, account, chainId, error, connect, switchNetwork],
+    [eth, provider, account, chainId, error, connecting, connect, switchNetwork],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

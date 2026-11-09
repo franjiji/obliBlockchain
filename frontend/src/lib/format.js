@@ -51,5 +51,11 @@ export function errorMessage(e) {
     }
   }
   if (e?.revert?.name) return MESSAGES[e.revert.name] ?? e.revert.name;
+  if (
+    e?.code === "UNKNOWN_ERROR" ||
+    e?.code === "NETWORK_ERROR" ||
+    /could not coalesce|failed to fetch|internal json-rpc/i.test(e?.message ?? "")
+  )
+    return "No se pudo comunicar con la red. Si es la local, ¿está corriendo `npx hardhat node`? Revisá también el RPC de la red en MetaMask.";
   return e?.shortMessage ?? e?.message ?? String(e);
 }
