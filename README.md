@@ -24,7 +24,7 @@ docs/        Documento de arquitectura, declaración de uso de IA y letra
 
 ## Requisitos
 
-- Node.js 20+ y npm
+- Node.js 22.13.0 o posterior y npm (probado con Node.js 24.11.1)
 - MetaMask (u otra billetera EVM) para usar la dApp
 
 ## Instalación
@@ -49,6 +49,27 @@ npx hardhat run scripts/deploy.js --network localhost
 El script imprime las direcciones, regala 100.000 mUSD a las primeras 5 cuentas de la red local y
 escribe `frontend/src/contracts/` (direcciones y ABI) para que la dApp los use.
 **Hay que volver a desplegar cada vez que se reinicia `npx hardhat node`.**
+
+### Sepolia
+
+1. Copiar `.env.example` a `.env` en la raiz del proyecto y completar
+   `SEPOLIA_RPC_URL` y `DEPLOYER_PRIVATE_KEY` con una cuenta exclusiva de pruebas.
+   Hardhat carga este archivo automaticamente; no se sube a Git.
+   `ETHERSCAN_API_KEY` no es necesaria para desplegar (solo para verificar codigo fuente).
+2. Obtener ETH de Sepolia para la cuenta que despliega y ejecutar:
+   ```bash
+   npx hardhat run scripts/deploy.js --network sepolia
+   ```
+3. Guardar las direcciones y enlaces de Etherscan que imprime el script. Se despliegan
+   `MockUSD` y `VestingPayroll` sin repartir tokens automaticamente. Para obtener mUSD,
+   conectar la dApp y usar el boton de tokens de prueba, que ejecuta `mint`.
+4. Ejecutar la dApp como se indica debajo y seleccionar Sepolia en MetaMask.
+   El frontend reconoce la red a partir del `deployment.json` generado.
+
+El deploy local y el de Sepolia escriben el mismo `frontend/src/contracts/deployment.json`.
+El frontend usa el ultimo despliegue realizado; no se debe volver a desplegar en local
+si se quiere seguir usando la configuracion de Sepolia.
+El script `advance-time.js` es exclusivo de la cadena local.
 
 ## Ejecutar la dApp
 
@@ -76,4 +97,5 @@ npx hardhat test --coverage   # tests + reporte de cobertura de líneas
 
 - [Arquitectura](docs/ARQUITECTURA.md)
 - [Declaración de uso de IA](docs/DECLARACION_IA.md)
+- [Direcciones y registro del despliegue en Sepolia](docs/DESPLIEGUE_SEPOLIA.md)
 - [Letra del obligatorio](docs/letra-obligatorio.md)
