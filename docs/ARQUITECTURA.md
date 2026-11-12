@@ -57,6 +57,7 @@ struct Agreement {
     Status  status;       // slot 0
     address beneficiary;  // slot 1
     uint40  cancelledAt;  // slot 1  (0 mientras no se cancele)
+    uint40  cliffTime;    // slot 1  (en [startTime, endTime]; igual a startTime = sin cliff)
     IERC20  token;        // slot 2
     uint128 totalAmount;  // slot 3
     uint128 claimedAmount;// slot 3
@@ -66,6 +67,7 @@ uint256 public agreementCount;   // los ids arrancan en 1
 ```
 
 - El id es un contador incremental; el id 0 nunca existe, por lo que `payer == address(0)` identifica un acuerdo inexistente.
+- `cliffTime` es una fecha absoluta. Es opcional: pasando `startTime` el acuerdo queda sin cliff. Se valida que esté en `[startTime, endTime]` (`InvalidCliff`).
 - `totalAmount` y `claimedAmount` son `uint128`: alcanzan para cualquier token real y permiten empaquetar ambos en un solo slot.
 - No hay arrays por usuario. Para listar «mis acuerdos» el frontend lee los eventos `AgreementCreated`, que tienen `payer` y `beneficiary` indexados (ver sección 10).
 
@@ -91,7 +93,7 @@ Un acuerdo `Cancelled` se queda en ese estado aunque el beneficiario cobre todo 
 ## 5. Fórmula de vesting
 
 ```
-vested(t) = 0                                   si t <= startTime
+vested(t) = 0                                   si t <= startTime  o  t < cliffTime
           = totalAmount                         si t >= endTime
           = totalAmount * (t - start) / (end - start)   en otro caso
 claimable(t) = vested(t) - claimedAmount
@@ -99,6 +101,7 @@ claimable(t) = vested(t) - claimedAmount
 
 - **Multiplicar antes de dividir** para no perder precisión. Se hace en `uint256`, así que `uint128 * uint40` nunca desborda.
 - **Redondeo hacia abajo**: el contrato nunca devenga de más. En `t >= endTime` devuelve exactamente `totalAmount`, por lo que no queda polvo atrapado.
+- **Cliff**: antes de `cliffTime` no se devenga nada. Al llegar al cliff se libera de golpe lo devengado linealmente desde `startTime` y luego sigue lineal (por ejemplo, con un cliff al 40 % del período, en ese instante ya es reclamable el 40 % del total). Si `cliffTime == endTime`, todo se libera recién al final.
 - **Cancelación**: si el estado es `Cancelled`, el tiempo se acota a `cancelledAt`; el devengo queda congelado y no sigue creciendo.
 - Ejemplo: 10 unidades durante 3 segundos → 3, 6 y 10 unidades (3,33 → 3; 6,67 → 6; al final, 10 exacto).
 
@@ -107,7 +110,7 @@ function _vested(Agreement storage a, uint256 timestamp) private view returns (u
     if (a.status == Status.Cancelled && timestamp > a.cancelledAt) timestamp = a.cancelledAt;
     uint256 start = a.startTime;
     uint256 end = a.endTime;
-    if (timestamp <= start) return 0;
+    if (timestamp <= start || timestamp < a.cliffTime) return 0;
     if (timestamp >= end) return a.totalAmount;
     return uint128((uint256(a.totalAmount) * (timestamp - start)) / (end - start));
 }
@@ -119,12 +122,12 @@ function _vested(Agreement storage a, uint256 timestamp) private view returns (u
 
 ```solidity
 address payer; uint40 startTime; uint40 endTime; bool revocable; Status status; // 20+5+5+1+1 = 32 bytes
-address beneficiary; uint40 cancelledAt;                                         // 25 bytes
+address beneficiary; uint40 cancelledAt; uint40 cliffTime;                       // 30 bytes
 IERC20 token;                                                                    // 20 bytes
 uint128 totalAmount; uint128 claimedAmount;                                      // 32 bytes
 ```
 
-Sin empaquetar serían 10 slots; con el orden elegido son 4. Crear un acuerdo escribe 4 slots en vez de 10 (cada `SSTORE` en un slot nuevo cuesta ~22.100 gas). En `claim`, `claimedAmount` y `totalAmount` comparten slot, así que se leen y escriben juntos.
+Sin empaquetar serían 10 slots; con el orden elegido son 4. Crear un acuerdo escribe 4 slots en vez de 10 (cada `SSTORE` en un slot nuevo cuesta ~22.100 gas). El `cliffTime` entra en el espacio libre del slot 1, así que agregar el cliff no costó ningún slot extra. En `claim`, `claimedAmount` y `totalAmount` comparten slot, así que se leen y escriben juntos.
 
 **b) `storage` como puntero en `claim` y `cancel`.**
 
@@ -176,7 +179,7 @@ El nuevo total se calcula una vez en una variable local (stack) y se reutiliza p
 
 | Evento | Parámetros | Cuándo |
 |---|---|---|
-| `AgreementCreated` | `id`, `payer`, `beneficiary` (los tres indexados), `token`, `totalAmount`, `startTime`, `endTime`, `revocable` | Al crear un acuerdo |
+| `AgreementCreated` | `id`, `payer`, `beneficiary` (los tres indexados), `token`, `totalAmount`, `startTime`, `cliffTime`, `endTime`, `revocable` | Al crear un acuerdo |
 | `Claimed` | `id` (indexed), `beneficiary` (indexed), `amount`, `totalClaimed` | En cada reclamo |
 | `AgreementCompleted` | `id` (indexed) | Cuando el reclamo deja `claimed == total` |
 | `AgreementCancelled` | `id` (indexed), `payer` (indexed), `vestedAtCancel`, `refunded` | Al cancelar |
@@ -188,6 +191,9 @@ El frontend usa `payer` y `beneficiary` indexados para construir «Acuerdos crea
 - **Inicio en el pasado:** se permite. Parte del monto queda disponible apenas se crea (útil para pagar sueldos ya devengados). La dApp avisa al usuario.
 - **Fin en el pasado:** también permitido; todo el monto es reclamable de inmediato.
 - **`end <= start`:** revierte con `InvalidTimeRange`.
+- **Cliff fuera de `[start, end]`:** revierte con `InvalidCliff`. Con `cliff == start` no hay cliff; con `cliff == end` todo se libera al final.
+- **Reclamar antes del cliff:** `NothingToClaim`, aunque el vesting ya haya empezado.
+- **Cancelar antes del cliff:** el devengado es 0, todo vuelve al pagador y el beneficiario no puede cobrar nada, ni siquiera pasada la fecha del cliff (el devengo queda congelado en `cancelledAt`).
 - **Reclamo antes del inicio o sin saldo:** `NothingToClaim`.
 - **Reclamo justo en `endTime`:** devuelve exactamente `totalAmount`.
 - **Cancelar antes de `startTime`:** devengado 0, se devuelve el total al pagador.
@@ -202,7 +208,7 @@ El frontend usa `payer` y `beneficiary` indexados para construir «Acuerdos crea
 
 ## 10. Limitaciones conocidas
 
-- **Sin cliff, sin pausa, sin upgrades ni lotes:** el contrato implementa solo el vesting lineal requerido.
+- **Sin pausa, sin upgrades ni lotes:** el contrato implementa el vesting lineal con cliff opcional y nada más.
 - **Sin recuperación de fondos:** si un token bloquea transferencias (lista negra, pausa) hacia el beneficiario, `claim` revierte y esos fondos quedan en el contrato. Tampoco hay forma de rescatar tokens enviados por error.
 - **Tokens no soportados:** fee-on-transfer (rechazados), rebasing y tokens con hooks inusuales (no probados).
 - **Dependencia del timestamp:** `block.timestamp` puede ser ajustado por el validador unos segundos; irrelevante para vestings de días o meses, pero importa para duraciones muy cortas.

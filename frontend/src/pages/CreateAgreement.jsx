@@ -16,6 +16,7 @@ export default function CreateAgreement({ onCreated }) {
   const [amount, setAmount] = useState("");
   const [start, setStart] = useState(() => toLocalInput(new Date(Date.now() + 2 * 60 * 1000)));
   const [end, setEnd] = useState(() => toLocalInput(new Date(Date.now() + 30 * 24 * 3600 * 1000)));
+  const [cliff, setCliff] = useState(""); // vacio = sin cliff
   const [revocable, setRevocable] = useState(true);
   const [info, setInfo] = useState(null); // { symbol, decimals, balance, allowance }
   const [formError, setFormError] = useState(null);
@@ -46,6 +47,8 @@ export default function CreateAgreement({ onCreated }) {
   const endTs = toTimestamp(end);
   const nowTs = Math.floor(Date.now() / 1000);
   const datesOk = Boolean(startTs && endTs && endTs > startTs);
+  const cliffTs = cliff ? toTimestamp(cliff) : startTs; // sin cliff = igual al inicio
+  const cliffOk = !cliff || (datesOk && cliffTs >= startTs && cliffTs <= endTs);
   const warnings = [];
   if (datesOk && endTs <= nowTs) warnings.push("La fecha de fin ya pasó: el beneficiario podrá reclamar todo el monto de inmediato.");
   else if (datesOk && startTs < nowTs) warnings.push("El inicio ya pasó: parte del monto ya queda disponible apenas se crea el acuerdo.");
@@ -68,6 +71,7 @@ export default function CreateAgreement({ onCreated }) {
     if (total > MAX_UINT128) return setFormError("El monto excede el máximo soportado.");
     if (!startTs || !endTs) return setFormError("Completá las fechas de inicio y fin.");
     if (endTs <= startTs) return setFormError("La fecha de fin debe ser posterior a la de inicio.");
+    if (!cliffOk) return setFormError("El cliff debe estar entre el inicio y el fin.");
 
     setBusy(true);
     try {
@@ -79,7 +83,7 @@ export default function CreateAgreement({ onCreated }) {
         if (!ok) return;
       }
       const ok = await send("Crear acuerdo", () =>
-        vestingContract(signer).createAgreement(beneficiary, token, total, startTs, endTs, revocable),
+        vestingContract(signer).createAgreement(beneficiary, token, total, startTs, cliffTs, endTs, revocable),
       );
       if (ok) {
         setAmount("");
@@ -146,6 +150,14 @@ export default function CreateAgreement({ onCreated }) {
           ⚠ {w}
         </p>
       ))}
+
+      <label>
+        Cliff (opcional)
+        <input type="datetime-local" value={cliff} onChange={(e) => setCliff(e.target.value)} />
+        <small className="muted">Antes de esta fecha no se puede reclamar nada; al llegar, se libera lo devengado desde el inicio. Vacío = sin cliff.</small>
+      </label>
+      {cliff && cliffOk && <p className="muted">Cliff: {formatDate(cliffTs)}.</p>}
+      {cliff && !cliffOk && <p className="warn">⚠ El cliff debe estar entre el inicio y el fin.</p>}
 
       <label className="check">
         <input type="checkbox" checked={revocable} onChange={(e) => setRevocable(e.target.checked)} />

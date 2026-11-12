@@ -82,6 +82,7 @@ export async function loadAgreement(provider, id, now) {
     total: a.totalAmount,
     claimed: a.claimedAmount,
     start: a.startTime,
+    cliff: a.cliffTime,
     end: a.endTime,
     revocable: a.revocable,
     status: Number(a.status),

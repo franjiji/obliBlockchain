@@ -44,6 +44,7 @@ const MESSAGES = {
   InvalidToken: "El token no es válido.",
   InvalidAmount: "El monto debe ser mayor a cero.",
   InvalidTimeRange: "La fecha de fin debe ser posterior a la de inicio.",
+  InvalidCliff: "El cliff debe estar entre el inicio y el fin.",
   AgreementNotFound: "El acuerdo no existe.",
   NotBeneficiary: "Solo el beneficiario puede reclamar.",
   NotPayer: "Solo el pagador puede cancelar.",

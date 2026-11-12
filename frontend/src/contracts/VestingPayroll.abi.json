@@ -33,6 +33,11 @@
   },
   {
     "inputs": [],
+    "name": "InvalidCliff",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "InvalidTimeRange",
     "type": "error"
   },
@@ -229,6 +234,12 @@
       {
         "indexed": false,
         "internalType": "uint40",
+        "name": "cliffTime",
+        "type": "uint40"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint40",
         "name": "endTime",
         "type": "uint40"
       },
@@ -355,6 +366,11 @@
       },
       {
         "internalType": "uint40",
+        "name": "cliffTime",
+        "type": "uint40"
+      },
+      {
+        "internalType": "uint40",
         "name": "endTime",
         "type": "uint40"
       },
@@ -420,6 +436,11 @@
           {
             "internalType": "uint40",
             "name": "cancelledAt",
+            "type": "uint40"
+          },
+          {
+            "internalType": "uint40",
+            "name": "cliffTime",
             "type": "uint40"
           },
           {

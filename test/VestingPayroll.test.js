@@ -20,17 +20,19 @@ async function deployFixture() {
     total = TOTAL,
     duration = DURATION,
     startOffset = 100n,
+    cliffOffset = 0n, // segundos despues del inicio; 0 = sin cliff
     revocable = true,
     to = beneficiary.address,
     tokenAddr = null,
   } = {}) {
     const now = BigInt(await time.latest());
     const start = now + startOffset;
+    const cliff = start + cliffOffset;
     const end = start + duration;
     tokenAddr ??= await token.getAddress();
-    await vault.connect(payer).createAgreement(to, tokenAddr, total, start, end, revocable);
+    await vault.connect(payer).createAgreement(to, tokenAddr, total, start, cliff, end, revocable);
     const id = await vault.agreementCount();
-    return { id, start, end };
+    return { id, start, cliff, end };
   }
 
   // Mina un bloque con timestamp exacto y ejecuta la tx en ese instante.
@@ -52,9 +54,9 @@ describe("VestingPayroll", () => {
       const end = start + DURATION;
       const tokenAddr = await token.getAddress();
 
-      await expect(vault.connect(payer).createAgreement(beneficiary.address, tokenAddr, TOTAL, start, end, true))
+      await expect(vault.connect(payer).createAgreement(beneficiary.address, tokenAddr, TOTAL, start, start, end, true))
         .to.emit(vault, "AgreementCreated")
-        .withArgs(1n, payer.address, beneficiary.address, tokenAddr, TOTAL, start, end, true);
+        .withArgs(1n, payer.address, beneficiary.address, tokenAddr, TOTAL, start, start, end, true);
 
       const a = await vault.getAgreement(1n);
       expect(a.payer).to.equal(payer.address);
@@ -63,6 +65,7 @@ describe("VestingPayroll", () => {
       expect(a.totalAmount).to.equal(TOTAL);
       expect(a.claimedAmount).to.equal(0n);
       expect(a.startTime).to.equal(start);
+      expect(a.cliffTime).to.equal(start);
       expect(a.endTime).to.equal(end);
       expect(a.revocable).to.equal(true);
       expect(a.status).to.equal(Status.Active);
@@ -86,11 +89,11 @@ describe("VestingPayroll", () => {
       const e = s + DURATION;
       const v = vault.connect(payer);
 
-      await expect(v.createAgreement(ethers.ZeroAddress, tokenAddr, TOTAL, s, e, true)).to.be.revertedWithCustomError(vault, "InvalidBeneficiary");
-      await expect(v.createAgreement(beneficiary.address, ethers.ZeroAddress, TOTAL, s, e, true)).to.be.revertedWithCustomError(vault, "InvalidToken");
-      await expect(v.createAgreement(beneficiary.address, tokenAddr, 0n, s, e, true)).to.be.revertedWithCustomError(vault, "InvalidAmount");
-      await expect(v.createAgreement(beneficiary.address, tokenAddr, TOTAL, s, s, true)).to.be.revertedWithCustomError(vault, "InvalidTimeRange"); // end == start
-      await expect(v.createAgreement(beneficiary.address, tokenAddr, TOTAL, e, s, true)).to.be.revertedWithCustomError(vault, "InvalidTimeRange"); // end < start
+      await expect(v.createAgreement(ethers.ZeroAddress, tokenAddr, TOTAL, s, s, e, true)).to.be.revertedWithCustomError(vault, "InvalidBeneficiary");
+      await expect(v.createAgreement(beneficiary.address, ethers.ZeroAddress, TOTAL, s, s, e, true)).to.be.revertedWithCustomError(vault, "InvalidToken");
+      await expect(v.createAgreement(beneficiary.address, tokenAddr, 0n, s, s, e, true)).to.be.revertedWithCustomError(vault, "InvalidAmount");
+      await expect(v.createAgreement(beneficiary.address, tokenAddr, TOTAL, s, s, s, true)).to.be.revertedWithCustomError(vault, "InvalidTimeRange"); // end == start
+      await expect(v.createAgreement(beneficiary.address, tokenAddr, TOTAL, e, e, s, true)).to.be.revertedWithCustomError(vault, "InvalidTimeRange"); // end < start
     });
 
     it("revierte si no hay allowance suficiente", async () => {
@@ -98,7 +101,7 @@ describe("VestingPayroll", () => {
       await token.mint(other.address, TOTAL); // tiene saldo pero nunca hizo approve
       const now = BigInt(await time.latest());
       await expect(
-        vault.connect(other).createAgreement(beneficiary.address, await token.getAddress(), TOTAL, now + 100n, now + 100n + DURATION, true),
+        vault.connect(other).createAgreement(beneficiary.address, await token.getAddress(), TOTAL, now + 100n, now + 100n, now + 100n + DURATION, true),
       ).to.be.revertedWithCustomError(token, "ERC20InsufficientAllowance");
     });
 
@@ -107,7 +110,7 @@ describe("VestingPayroll", () => {
       await token.connect(other).approve(await vault.getAddress(), TOTAL); // allowance ok, saldo 0
       const now = BigInt(await time.latest());
       await expect(
-        vault.connect(other).createAgreement(beneficiary.address, await token.getAddress(), TOTAL, now + 100n, now + 100n + DURATION, true),
+        vault.connect(other).createAgreement(beneficiary.address, await token.getAddress(), TOTAL, now + 100n, now + 100n, now + 100n + DURATION, true),
       ).to.be.revertedWithCustomError(token, "ERC20InsufficientBalance");
     });
 
@@ -118,7 +121,7 @@ describe("VestingPayroll", () => {
       await fee.connect(payer).approve(await vault.getAddress(), TOTAL);
       const now = BigInt(await time.latest());
       await expect(
-        vault.connect(payer).createAgreement(beneficiary.address, await fee.getAddress(), TOTAL, now + 100n, now + 100n + DURATION, true),
+        vault.connect(payer).createAgreement(beneficiary.address, await fee.getAddress(), TOTAL, now + 100n, now + 100n, now + 100n + DURATION, true),
       )
         .to.be.revertedWithCustomError(vault, "UnexpectedTransferAmount")
         .withArgs(TOTAL, TOTAL - TOTAL / 100n);
@@ -345,7 +348,7 @@ describe("VestingPayroll", () => {
       const max40 = 2n ** 40n - 1n;
       await token.mint(payer.address, max128);
       await token.connect(payer).approve(await vault.getAddress(), max128);
-      await vault.connect(payer).createAgreement(beneficiary.address, await token.getAddress(), max128, 0n, max40, true);
+      await vault.connect(payer).createAgreement(beneficiary.address, await token.getAddress(), max128, 0n, 0n, max40, true);
       const id = await vault.agreementCount();
 
       const t = max40 - 1n;
@@ -354,6 +357,99 @@ describe("VestingPayroll", () => {
       expect(vested).to.equal(expected);
       expect(vested).to.be.lessThanOrEqual(max128);
       expect(await vault.vestedAmountAt(id, max40)).to.equal(max128);
+    });
+  });
+
+  // ───────────────────────── Cliff ─────────────────────────
+  describe("cliff", () => {
+    const CLIFF = 400n; // el cliff cae al 40 % del periodo: 400 de los 1000 segundos
+
+    it("guarda el cliff y lo informa en el evento", async () => {
+      const { vault, token, payer, beneficiary } = await loadFixture(deployFixture);
+      const now = BigInt(await time.latest());
+      const start = now + 100n;
+      await expect(
+        vault.connect(payer).createAgreement(beneficiary.address, await token.getAddress(), TOTAL, start, start + CLIFF, start + DURATION, true),
+      )
+        .to.emit(vault, "AgreementCreated")
+        .withArgs(1n, payer.address, beneficiary.address, await token.getAddress(), TOTAL, start, start + CLIFF, start + DURATION, true);
+      expect((await vault.getAgreement(1n)).cliffTime).to.equal(start + CLIFF);
+    });
+
+    it("rechaza un cliff fuera de [inicio, fin]", async () => {
+      const { vault, token, payer, beneficiary } = await loadFixture(deployFixture);
+      const tokenAddr = await token.getAddress();
+      const now = BigInt(await time.latest());
+      const s = now + 100n;
+      const e = s + DURATION;
+      const v = vault.connect(payer);
+      await expect(v.createAgreement(beneficiary.address, tokenAddr, TOTAL, s, s - 1n, e, true)).to.be.revertedWithCustomError(vault, "InvalidCliff");
+      await expect(v.createAgreement(beneficiary.address, tokenAddr, TOTAL, s, e + 1n, e, true)).to.be.revertedWithCustomError(vault, "InvalidCliff");
+      await v.createAgreement(beneficiary.address, tokenAddr, TOTAL, s, e, e, true); // cliff == fin es valido
+    });
+
+    it("antes del cliff no devenga nada, aunque el vesting ya haya empezado", async () => {
+      const { vault, create } = await loadFixture(deployFixture);
+      const { id, start, cliff } = await create({ cliffOffset: CLIFF });
+      expect(await vault.vestedAmountAt(id, start + 300n)).to.equal(0n); // sin cliff serian 300 mUSD
+      expect(await vault.vestedAmountAt(id, cliff - 1n)).to.equal(0n);
+    });
+
+    it("no se puede reclamar antes del cliff", async () => {
+      const { vault, beneficiary, create, at } = await loadFixture(deployFixture);
+      const { id, cliff } = await create({ cliffOffset: CLIFF });
+      await expect(at(cliff - 1n, () => vault.connect(beneficiary).claim(id)))
+        .to.be.revertedWithCustomError(vault, "NothingToClaim")
+        .withArgs(id);
+    });
+
+    it("al llegar al cliff se desbloquea lo devengado desde el inicio y sigue lineal", async () => {
+      const { vault, token, beneficiary, create, at } = await loadFixture(deployFixture);
+      const { id, start, cliff } = await create({ cliffOffset: CLIFF });
+      const unit = TOTAL / DURATION; // 1 mUSD por segundo
+
+      await at(cliff, () => vault.connect(beneficiary).claim(id));
+      expect(await token.balanceOf(beneficiary.address)).to.equal(CLIFF * unit);
+
+      await at(start + 700n, () => vault.connect(beneficiary).claim(id));
+      expect(await token.balanceOf(beneficiary.address)).to.equal(700n * unit);
+    });
+
+    it("con el cliff igual al fin, todo se desbloquea recien al final", async () => {
+      const { vault, token, beneficiary, create, at } = await loadFixture(deployFixture);
+      const { id, end } = await create({ cliffOffset: DURATION });
+      expect(await vault.vestedAmountAt(id, end - 1n)).to.equal(0n);
+      await at(end, () => vault.connect(beneficiary).claim(id));
+      expect(await token.balanceOf(beneficiary.address)).to.equal(TOTAL);
+      expect((await vault.getAgreement(id)).status).to.equal(Status.Completed);
+    });
+
+    it("cancelar antes del cliff devuelve todo al pagador y el beneficiario no cobra nada", async () => {
+      const { vault, token, payer, beneficiary, create, at } = await loadFixture(deployFixture);
+      const { id, start, cliff } = await create({ cliffOffset: CLIFF });
+      const before = await token.balanceOf(payer.address);
+
+      await expect(at(start + 300n, () => vault.connect(payer).cancel(id)))
+        .to.emit(vault, "AgreementCancelled")
+        .withArgs(id, payer.address, 0n, TOTAL);
+      expect(await token.balanceOf(payer.address)).to.equal(before + TOTAL);
+
+      await time.increaseTo(cliff + 100n); // el cancelado no devenga mas, ni siquiera pasado el cliff
+      await expect(vault.connect(beneficiary).claim(id)).to.be.revertedWithCustomError(vault, "NothingToClaim");
+    });
+
+    it("cancelar despues del cliff reparte lo devengado desde el inicio", async () => {
+      const { vault, token, payer, beneficiary, create, at } = await loadFixture(deployFixture);
+      const { id, start } = await create({ cliffOffset: CLIFF });
+      const unit = TOTAL / DURATION;
+
+      await expect(at(start + 600n, () => vault.connect(payer).cancel(id)))
+        .to.emit(vault, "AgreementCancelled")
+        .withArgs(id, payer.address, 600n * unit, TOTAL - 600n * unit);
+
+      await vault.connect(beneficiary).claim(id);
+      expect(await token.balanceOf(beneficiary.address)).to.equal(600n * unit);
+      expect(await token.balanceOf(await vault.getAddress())).to.equal(0n);
     });
   });
 
@@ -369,7 +465,7 @@ describe("VestingPayroll", () => {
       const now = BigInt(await time.latest());
       const start = now + 100n;
       const end = start + DURATION;
-      await vault.connect(payer).createAgreement(await attacker.getAddress(), await rtoken.getAddress(), TOTAL, start, end, false);
+      await vault.connect(payer).createAgreement(await attacker.getAddress(), await rtoken.getAddress(), TOTAL, start, start, end, false);
       const id = await vault.agreementCount();
 
       await time.increaseTo(end + 1n);

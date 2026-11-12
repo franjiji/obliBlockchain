@@ -2,7 +2,8 @@
 
 dApp para administrar pagos salariales / acuerdos de vesting con smart contracts sobre una red EVM.
 Un pagador crea un acuerdo, deposita por adelantado el monto en un ERC-20 y el beneficiario reclama
-solo lo devengado linealmente entre `startTime` y `endTime`.
+solo lo devengado linealmente entre `startTime` y `endTime`, con un cliff opcional
+(antes de esa fecha no se puede reclamar nada).
 
 Universidad ORT Uruguay — Taller de Tecnologías 2 (78500) — Grupo M6C.
 

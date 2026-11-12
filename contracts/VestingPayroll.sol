@@ -8,6 +8,7 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
 /// @title VestingPayroll
 /// @notice Acuerdos de pago/vesting lineal en ERC-20. El pagador fondea el total al crear el
 ///         acuerdo y el beneficiario reclama solo lo devengado segun el tiempo transcurrido.
+///         Opcionalmente hay un cliff: antes de esa fecha no se puede reclamar nada.
 contract VestingPayroll is ReentrancyGuard {
     using SafeERC20 for IERC20;
 
@@ -21,7 +22,7 @@ contract VestingPayroll is ReentrancyGuard {
 
     /// @dev Empaquetado en 4 slots de storage (ver docs/ARQUITECTURA.md):
     ///      slot0: payer(20) + startTime(5) + endTime(5) + revocable(1) + status(1) = 32 bytes
-    ///      slot1: beneficiary(20) + cancelledAt(5)
+    ///      slot1: beneficiary(20) + cancelledAt(5) + cliffTime(5)
     ///      slot2: token(20)
     ///      slot3: totalAmount(16) + claimedAmount(16) = 32 bytes
     struct Agreement {
@@ -32,6 +33,7 @@ contract VestingPayroll is ReentrancyGuard {
         Status status;
         address beneficiary;
         uint40 cancelledAt; // 0 mientras no se cancele
+        uint40 cliffTime; // en [startTime, endTime]; igual a startTime significa sin cliff
         IERC20 token;
         uint128 totalAmount;
         uint128 claimedAmount;
@@ -52,6 +54,7 @@ contract VestingPayroll is ReentrancyGuard {
         address token,
         uint128 totalAmount,
         uint40 startTime,
+        uint40 cliffTime,
         uint40 endTime,
         bool revocable
     );
@@ -65,6 +68,7 @@ contract VestingPayroll is ReentrancyGuard {
     error InvalidToken();
     error InvalidAmount();
     error InvalidTimeRange();
+    error InvalidCliff();
     error AgreementNotFound(uint256 id);
     error NotBeneficiary(uint256 id, address caller);
     error NotPayer(uint256 id, address caller);
@@ -77,11 +81,14 @@ contract VestingPayroll is ReentrancyGuard {
     // ───────────────────────────── Escritura ─────────────────────────────
 
     /// @notice Crea un acuerdo y bloquea `totalAmount` del pagador (requiere approve previo).
+    /// @param cliffTime Fecha antes de la cual no se devenga nada; debe estar en [startTime, endTime].
+    ///        Pasar `startTime` para un acuerdo sin cliff.
     function createAgreement(
         address beneficiary,
         IERC20 token,
         uint128 totalAmount,
         uint40 startTime,
+        uint40 cliffTime,
         uint40 endTime,
         bool revocable
     ) external nonReentrant returns (uint256 id) {
@@ -90,6 +97,7 @@ contract VestingPayroll is ReentrancyGuard {
         if (address(token) == address(0)) revert InvalidToken();
         if (totalAmount == 0) revert InvalidAmount();
         if (endTime <= startTime) revert InvalidTimeRange();
+        if (cliffTime < startTime || cliffTime > endTime) revert InvalidCliff();
 
         // Effects
         id = ++agreementCount;
@@ -101,12 +109,23 @@ contract VestingPayroll is ReentrancyGuard {
             status: Status.Active,
             beneficiary: beneficiary,
             cancelledAt: 0,
+            cliffTime: cliffTime,
             token: token,
             totalAmount: totalAmount,
             claimedAmount: 0
         });
 
-        emit AgreementCreated(id, msg.sender, beneficiary, address(token), totalAmount, startTime, endTime, revocable);
+        emit AgreementCreated(
+            id,
+            msg.sender,
+            beneficiary,
+            address(token),
+            totalAmount,
+            startTime,
+            cliffTime,
+            endTime,
+            revocable
+        );
 
         // Interactions: se mide lo realmente recibido para rechazar tokens con fee-on-transfer,
         // que dejarian el acuerdo sub-fondeado.
@@ -184,7 +203,8 @@ contract VestingPayroll is ReentrancyGuard {
         if (a.payer == address(0)) revert AgreementNotFound(id);
     }
 
-    /// @dev vested = total * (t - start) / (end - start), con t acotado a [start, end].
+    /// @dev vested = 0 antes del cliff; desde el cliff, total * (t - start) / (end - start),
+    ///      con t acotado a [start, end]. Al llegar al cliff se desbloquea lo devengado desde el inicio.
     ///      Se multiplica antes de dividir y el redondeo es hacia abajo: el contrato nunca
     ///      devenga de mas, y en t >= end devuelve exactamente `totalAmount`.
     ///      No hay overflow: uint128 * uint40 cabe en uint256.
@@ -193,7 +213,7 @@ contract VestingPayroll is ReentrancyGuard {
 
         uint256 start = a.startTime;
         uint256 end = a.endTime;
-        if (timestamp <= start) return 0;
+        if (timestamp <= start || timestamp < a.cliffTime) return 0;
         if (timestamp >= end) return a.totalAmount;
 
         return uint128((uint256(a.totalAmount) * (timestamp - start)) / (end - start));

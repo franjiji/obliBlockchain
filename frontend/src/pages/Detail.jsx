@@ -66,6 +66,7 @@ export default function Detail({ id, onBack }) {
         <dt>Reclamado</dt><dd>{fmt(r.claimed)}</dd>
         <dt>Disponible</dt><dd><strong>{fmt(r.claimable)}</strong></dd>
         <dt>Inicio</dt><dd>{formatDate(r.start)}</dd>
+        <dt>Cliff</dt><dd>{r.cliff > r.start ? `${formatDate(r.cliff)} (no se puede reclamar antes)` : "Sin cliff"}</dd>
         <dt>Fin</dt><dd>{formatDate(r.end)}</dd>
         <dt>Revocable</dt><dd>{r.revocable ? "Sí" : "No"}</dd>
         {r.status === 2 && (<><dt>Cancelado el</dt><dd>{formatDate(r.cancelledAt)}</dd></>)}
@@ -76,6 +77,9 @@ export default function Detail({ id, onBack }) {
         <div className="progress-bar" style={{ width: `${pct}%` }} />
       </div>
       <p className="muted">{pct.toFixed(1)} % del período transcurrido (hora de la cadena: {formatDate(r.now)})</p>
+      {r.status === 0 && r.cliff > r.start && r.now < r.cliff && (
+        <p className="warn">⏳ Todavía no se alcanzó el cliff: no hay nada para reclamar hasta {formatDate(r.cliff)}.</p>
+      )}
 
       <h3>Historial</h3>
       <ul className="history">
