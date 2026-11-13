@@ -5,7 +5,7 @@ import tokenAbi from "../contracts/MockUSD.abi.json"; // sirve como ABI ERC-20 g
 
 export { deployment, vestingAbi, tokenAbi };
 
-export const NETWORK_NAMES = { 31337: "Hardhat Local", 11155111: "Sepolia", 1: "Ethereum Mainnet" };
+export const NETWORK_NAMES = { 31337: "Hardhat Local", 11155111: "Sepolia", 84532: "Base Sepolia", 1: "Ethereum Mainnet" };
 
 export const LOCAL_CHAIN_PARAMS = {
   chainId: "0x7a69", // 31337

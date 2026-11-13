@@ -216,7 +216,7 @@ El frontend usa `payer` y `beneficiary` indexados para construir «Acuerdos crea
   - Los listados reconstruyen el índice desde eventos con `getLogs`. Los RPC públicos limitan el rango de bloques y la cantidad de resultados; la dApp pide por tramos, reintenta y guarda un caché incremental, pero en una red con mucho historial lo correcto sería un indexador (por ejemplo The Graph).
   - Cada actualización hace ~2 llamadas de lectura por acuerdo, sin multicall ni paginación.
   - La actualización automática es por polling (cada 30 s con la pestaña visible), no por suscripción.
-- **Pruebas:** la dApp se probó contra una red local de Hardhat; no se desplegó en una testnet pública.
+- **Pruebas:** la prueba manual de la dApp con MetaMask se hizo en una red local de Hardhat. Los contratos con cliff están desplegados en Sepolia y Base Sepolia (ver `docs/DESPLIEGUE_SEPOLIA.md` y `docs/COMPARACION_L2.md`) y allí se ejecutaron las operaciones principales con scripts, pero la dApp no se volvió a probar a mano en esas redes.
 - **Auditoría:** el código no fue auditado por terceros.
 
 ## 11. Comparación conceptual Ethereum L1 vs L2
@@ -228,5 +228,22 @@ El frontend usa `payer` y `beneficiary` indexados para construir «Acuerdos crea
 | **UX** | Confirmación en ~12 s por bloque y finalidad en minutos; el usuario necesita ETH para gas. Fees impredecibles. | Soft confirmation en segundos (confías en el secuenciador); fees bajos y estables. Hay que cambiar de red y a veces hacer un *bridge* de fondos. Retirar a L1: ~7 días en optimistic rollups, horas en ZK. |
 | **Seguridad** | Máxima: consenso de L1, sin intermediarios. | Hereda la validez de L1 si las pruebas (fraud o validity) funcionan y los datos se publican en L1. Pero: el secuenciador puede censurar o caerse (hay *forced inclusion* y *escape hatch*), y quien controla los upgrades (multisig, Security Council) es un supuesto de confianza adicional. |
 | **Descentralización / riesgos** | Muchos validadores. | Secuenciador generalmente único; depende de que al menos un actor audite (optimistic: 1 de N honesto). |
+
+### Resultados medidos: Sepolia (L1 de prueba) vs Base Sepolia (L2 de prueba)
+
+Mismo bytecode y mismos parámetros en ambas redes (detalle, recibos y links en `docs/COMPARACION_L2.md`). Los montos son ETH de prueba.
+
+| Operación | Gas Sepolia | Gas Base Sepolia | Costo Sepolia (ETH) | Costo Base Sepolia (ETH) |
+|---|---|---|---|---|
+| `approve` | 128.250 | 46.330 | 0,00012825 | 0,000000278 |
+| `createAgreement` | 707.405 | 177.401 | 0,000707405 | 0,00000106 |
+| `claim` | 71.087 | 55.087 | 0,000071087 | 0,00000033 |
+| `cancel` | 81.526 | 58.326 | 0,000081526 | 0,00000035 |
+| **Flujo completo** | | | **0,000988268** | **0,00000202** |
+
+- En esta muestra el flujo completo costó unas **489 veces menos** en Base Sepolia (99,8 % de ahorro). La causa principal es el precio del gas (1 gwei en Sepolia contra 0,006 gwei en Base) y, en menor medida, que en este caso se usó menos gas.
+- El cargo extra de la L2 por publicar los datos en L1 (`l1Fee`) fue despreciable en la muestra (menos del 0,2 % del total de cada operación), pero hay que incluirlo en la cuenta.
+- El gas usado difiere entre redes. Al desplegar en una cadena local de Hardhat, `MockUSD` usó 507.908 gas, igual que en Base Sepolia, así que ese valor corresponde al contrato; la diferencia de Sepolia se debe a las reglas de gas de esa red, y no se verificó su causa exacta.
+- Es una sola muestra en testnets: los precios cambian con la demanda y no son una cotización de mainnet.
 
 **Conclusión para este caso de uso.** Un sistema de sueldos paga montos chicos y repetidos, y se quiere que el beneficiario pueda reclamar seguido. Los costos de L1 hacen poco práctico reclamar con alta frecuencia, así que una L2 (por ejemplo Base, Arbitrum u Optimism) es la elección natural para producción. L1 sigue siendo preferible cuando se priorizan la finalidad inmediata y la mínima confianza sobre los costos, por ejemplo para acuerdos de montos grandes y vesting de largo plazo, donde se reclama pocas veces. El contrato es idéntico en ambas, ya que es compatible con la EVM; solo cambian el RPC y el chainId.

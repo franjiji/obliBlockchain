@@ -10,8 +10,7 @@ Universidad ORT Uruguay — Taller de Tecnologías 2 (78500) — Grupo M6C.
 ## Integrantes
 
 - Francisco Castelli (322738)
-- _(completar)_
-- _(completar)_
+- Matías González (completar número de estudiante)
 
 ## Estructura
 
