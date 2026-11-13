@@ -15,6 +15,9 @@ nav { display: flex; gap: 6px; margin: 12px 0; flex-wrap: wrap; }
 .tab { background: transparent; border: 1px solid transparent; } .tab.active { background: var(--card); border-color: var(--border); font-weight: 600; }
 .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-top: 8px; }
 .muted { color: var(--muted); font-size: 13px; }
+.welcome h2 { margin-top: 0; }
+.steps { list-style: none; padding: 0; margin: 16px 0 20px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.steps li { border: 1px solid var(--border); border-radius: 8px; padding: 12px; display: grid; gap: 4px; align-content: start; }
 .error { color: var(--bad); }
 .warn { color: var(--warn); margin: 4px 0; }
 button { font: inherit; padding: 7px 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--card); cursor: pointer; }
@@ -45,4 +48,4 @@ th { color: var(--muted); font-weight: 600; font-size: 13px; }
 .tx { background: var(--card); border: 1px solid var(--border); border-left-width: 5px; border-radius: 8px; padding: 10px 12px; display: flex; justify-content: space-between; gap: 8px; box-shadow: 0 4px 12px rgba(0,0,0,.08); }
 .tx-pending { border-left-color: var(--warn); } .tx-confirmed { border-left-color: var(--ok); } .tx-failed { border-left-color: var(--bad); }
 .tx-error { color: var(--bad); font-size: 13px; }
-@media (max-width: 600px) { .row { grid-template-columns: 1fr; } }
+@media (max-width: 600px) { .row { grid-template-columns: 1fr; } .steps { grid-template-columns: 1fr; } }

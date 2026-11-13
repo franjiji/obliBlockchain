@@ -6,6 +6,7 @@ import CreateAgreement from "./pages/CreateAgreement.jsx";
 import Created from "./pages/Created.jsx";
 import Income from "./pages/Income.jsx";
 import Detail from "./pages/Detail.jsx";
+import Welcome from "./pages/Welcome.jsx";
 
 const TABS = [
   ["create", "Crear acuerdo"],
@@ -41,8 +42,7 @@ export default function App() {
   const goTab = (t) => { setDetailId(null); setTab(t); };
 
   let content;
-  if (!hasWallet) content = <div className="card">No se detectó una billetera EVM. Instalá MetaMask para usar la dApp.</div>;
-  else if (!account) content = <div className="card"><p>Conectá tu billetera para empezar.</p><button className="primary" onClick={connect} disabled={connecting}>{connecting ? "Esperando a la billetera…" : "Conectar billetera"}</button></div>;
+  if (!hasWallet || !account) content = <Welcome hasWallet={hasWallet} connecting={connecting} connect={connect} expectedChainName={expectedChainName} />;
   else if (!chainOk) content = <div className="card"><p className="error">Estás en la red «{chainName}», pero la dApp está desplegada en «{expectedChainName}».</p><button className="primary" onClick={switchNetwork}>Cambiar a {expectedChainName}</button></div>;
   else if (tab === "detail") content = <Detail id={detailId} onBack={() => goTab("created")} />;
   else if (tab === "create") content = <CreateAgreement onCreated={() => goTab("created")} />;
