@@ -28,6 +28,7 @@ const record = (chainId === 31337n ? null : readJson(file)) ?? {
   contractVersion: "cliff", operations: [],
 };
 assert.equal(record.deployer, deployer.address, "El registro pertenece a otra cuenta");
+assert.equal(record.chainId, Number(chainId), "El registro pertenece a otra red");
 const persist = () => writeJson(file, record);
 console.log("Desplegando con:", deployer.address);
 
