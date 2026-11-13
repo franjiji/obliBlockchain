@@ -9,6 +9,7 @@ import Detail from "./pages/Detail.jsx";
 import Welcome from "./pages/Welcome.jsx";
 
 const TABS = [
+  ["home", "Inicio"],
   ["create", "Crear acuerdo"],
   ["created", "Acuerdos creados"],
   ["income", "Mis ingresos"],
@@ -35,15 +36,16 @@ function TxList() {
 
 export default function App() {
   const { hasWallet, account, chainName, chainOk, expectedChainName, error, connecting, connect, switchNetwork } = useWallet();
-  const [tab, setTab] = useState("create");
+  const [tab, setTab] = useState("home");
   const [detailId, setDetailId] = useState(null);
 
   const open = (id) => { setDetailId(id); setTab("detail"); };
   const goTab = (t) => { setDetailId(null); setTab(t); };
 
   let content;
-  if (!hasWallet || !account) content = <Welcome hasWallet={hasWallet} connecting={connecting} connect={connect} expectedChainName={expectedChainName} />;
+  if (!hasWallet || !account) content = <Welcome hasWallet={hasWallet} connecting={connecting} connect={connect} />;
   else if (!chainOk) content = <div className="card"><p className="error">Estás en la red «{chainName}», pero la dApp está desplegada en «{expectedChainName}».</p><button className="primary" onClick={switchNetwork}>Cambiar a {expectedChainName}</button></div>;
+  else if (tab === "home") content = <Welcome hasWallet account={account} onStart={() => goTab("create")} />;
   else if (tab === "detail") content = <Detail id={detailId} onBack={() => goTab("created")} />;
   else if (tab === "create") content = <CreateAgreement onCreated={() => goTab("created")} />;
   else if (tab === "created") content = <Created onOpen={open} />;
