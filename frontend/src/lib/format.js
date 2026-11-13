@@ -58,6 +58,14 @@ const MESSAGES = {
 };
 const interfaces = [new Interface(vestingAbi), new Interface(tokenAbi)];
 
+function rawText(e) {
+  try {
+    return `${e?.message ?? ""} ${JSON.stringify(e, (_k, v) => (typeof v === "bigint" ? v.toString() : v))}`;
+  } catch {
+    return String(e?.message ?? e);
+  }
+}
+
 export function errorMessage(e) {
   if (e?.code === "ACTION_REJECTED" || e?.code === 4001) return "Transacción rechazada en la billetera.";
   const data = [e?.data, e?.error?.data, e?.info?.error?.data].find((d) => typeof d === "string" && d.startsWith("0x"));
@@ -68,6 +76,10 @@ export function errorMessage(e) {
     }
   }
   if (e?.revert?.name) return MESSAGES[e.revert.name] ?? e.revert.name;
+  // MetaMask envuelve los errores del nodo en "Internal JSON-RPC error"; el detalle real queda anidado.
+  const raw = rawText(e);
+  if (/nonce too (high|low)|nonce has already been used/i.test(raw))
+    return "MetaMask tiene guardado un contador de transacciones (nonce) de una cadena local anterior. En MetaMask: Configuración → Avanzado → «Borrar datos de actividad» (o eliminá y volvé a agregar la red Hardhat Local) y reintentá.";
   if (
     e?.code === "UNKNOWN_ERROR" ||
     e?.code === "NETWORK_ERROR" ||
