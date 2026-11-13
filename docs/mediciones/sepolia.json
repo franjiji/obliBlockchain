@@ -1,0 +1,158 @@
+{
+  "chainId": 11155111,
+  "network": "sepolia",
+  "payer": "0x901f482CDAd9c06af11bbbAbE6E663f1172251C2",
+  "token": "0xbFcE372F590fc9b0028DFF35DdbBf064C9e7CcF7",
+  "vesting": "0x4b557207Daaa63505fE5198FF4A6Bf64c38a1E5d",
+  "parameters": {
+    "beneficiary": "0x901f482CDAd9c06af11bbbAbE6E663f1172251C2",
+    "totalAmount": "100000000",
+    "mintAmount": "1000000000",
+    "startTime": 1794589824,
+    "cliffTime": 1794591624,
+    "endTime": 1794676224,
+    "revocable": true,
+    "description": "100 mUSD, periodo 24 h, cliff a los 30 min; inicio 1 h antes de generar parametros"
+  },
+  "operations": [
+    {
+      "operation": "mint",
+      "transactionHash": "0x168589043d3ed789358ebc8bca15906b1d4090c587cf38d362aa712ad472413a",
+      "status": "confirmed",
+      "blockNumber": 12127660,
+      "timestamp": 1794593436,
+      "sender": "0x901f482CDAd9c06af11bbbAbE6E663f1172251C2",
+      "to": "0xbfce372f590fc9b0028dff35ddbbf064c9e7ccf7",
+      "input": "0x40c10f19000000000000000000000000901f482cdad9c06af11bbbabe6e663f1172251c2000000000000000000000000000000000000000000000000000000003b9aca00",
+      "gasUsed": "238419",
+      "gasPriceWei": "1000000000",
+      "executionFeeWei": "238419000000000",
+      "l1FeeWei": "0",
+      "otherFeeWei": "0",
+      "totalFeeWei": "238419000000000",
+      "senderBalanceBeforeWei": "261930269302968068",
+      "senderBalanceAfterWei": "261691850302968068",
+      "receiptFeeFields": {
+        "gasUsed": "0x3a353",
+        "effectiveGasPrice": "0x3b9aca00"
+      }
+    },
+    {
+      "operation": "approve",
+      "transactionHash": "0x07ef4864e1b8cb46c9a8b4df768673d9cbe2181f469563a05adda35baeed558a",
+      "status": "confirmed",
+      "blockNumber": 12127661,
+      "timestamp": 1794593448,
+      "sender": "0x901f482CDAd9c06af11bbbAbE6E663f1172251C2",
+      "to": "0xbfce372f590fc9b0028dff35ddbbf064c9e7ccf7",
+      "input": "0x095ea7b30000000000000000000000004b557207daaa63505fe5198ff4a6bf64c38a1e5d0000000000000000000000000000000000000000000000000000000005f5e100",
+      "gasUsed": "128250",
+      "gasPriceWei": "1000000000",
+      "executionFeeWei": "128250000000000",
+      "l1FeeWei": "0",
+      "otherFeeWei": "0",
+      "totalFeeWei": "128250000000000",
+      "senderBalanceBeforeWei": "261691850302968068",
+      "senderBalanceAfterWei": "261563600302968068",
+      "receiptFeeFields": {
+        "gasUsed": "0x1f4fa",
+        "effectiveGasPrice": "0x3b9aca00"
+      }
+    },
+    {
+      "operation": "createAgreement",
+      "transactionHash": "0x538eea9a0c8a158b10606428a000a3d88cef35c656e905900121b673669286d1",
+      "status": "confirmed",
+      "blockNumber": 12127662,
+      "timestamp": 1794593460,
+      "sender": "0x901f482CDAd9c06af11bbbAbE6E663f1172251C2",
+      "to": "0x4b557207daaa63505fe5198ff4a6bf64c38a1e5d",
+      "input": "0xe74f0d40000000000000000000000000901f482cdad9c06af11bbbabe6e663f1172251c2000000000000000000000000bfce372f590fc9b0028dff35ddbbf064c9e7ccf70000000000000000000000000000000000000000000000000000000005f5e100000000000000000000000000000000000000000000000000000000006af74480000000000000000000000000000000000000000000000000000000006af74b88000000000000000000000000000000000000000000000000000000006af896000000000000000000000000000000000000000000000000000000000000000001",
+      "gasUsed": "707405",
+      "gasPriceWei": "1000000000",
+      "executionFeeWei": "707405000000000",
+      "l1FeeWei": "0",
+      "otherFeeWei": "0",
+      "totalFeeWei": "707405000000000",
+      "senderBalanceBeforeWei": "261563600302968068",
+      "senderBalanceAfterWei": "260856195302968068",
+      "receiptFeeFields": {
+        "gasUsed": "0xacb4d",
+        "effectiveGasPrice": "0x3b9aca00"
+      }
+    },
+    {
+      "operation": "claim",
+      "transactionHash": "0x55231da8d6e922a36148d43ccdbb46df0adda295f299018c5fe0ae827b754cf3",
+      "status": "confirmed",
+      "blockNumber": 12127663,
+      "timestamp": 1794593472,
+      "sender": "0x901f482CDAd9c06af11bbbAbE6E663f1172251C2",
+      "to": "0x4b557207daaa63505fe5198ff4a6bf64c38a1e5d",
+      "input": "0x379607f50000000000000000000000000000000000000000000000000000000000000001",
+      "gasUsed": "71087",
+      "gasPriceWei": "1000000000",
+      "executionFeeWei": "71087000000000",
+      "l1FeeWei": "0",
+      "otherFeeWei": "0",
+      "totalFeeWei": "71087000000000",
+      "senderBalanceBeforeWei": "260856195302968068",
+      "senderBalanceAfterWei": "260785108302968068",
+      "receiptFeeFields": {
+        "gasUsed": "0x115af",
+        "effectiveGasPrice": "0x3b9aca00"
+      }
+    },
+    {
+      "operation": "cancel",
+      "transactionHash": "0x5e6ec9b6b982e8b5bbb27f4bc2185200a911afe3798c232a9bc22b4efb01f2be",
+      "status": "confirmed",
+      "blockNumber": 12127664,
+      "timestamp": 1794593484,
+      "sender": "0x901f482CDAd9c06af11bbbAbE6E663f1172251C2",
+      "to": "0x4b557207daaa63505fe5198ff4a6bf64c38a1e5d",
+      "input": "0x40e58ee50000000000000000000000000000000000000000000000000000000000000001",
+      "gasUsed": "81526",
+      "gasPriceWei": "1000000000",
+      "executionFeeWei": "81526000000000",
+      "l1FeeWei": "0",
+      "otherFeeWei": "0",
+      "totalFeeWei": "81526000000000",
+      "senderBalanceBeforeWei": "260785108302968068",
+      "senderBalanceAfterWei": "260703582302968068",
+      "receiptFeeFields": {
+        "gasUsed": "0x13e76",
+        "effectiveGasPrice": "0x3b9aca00"
+      }
+    },
+    {
+      "operation": "claimAfterCancel",
+      "transactionHash": "0x9cb54e8928489dd5592987573dba1643a2e00a48fa7b5b595025454b26579fca",
+      "status": "confirmed",
+      "blockNumber": 12127665,
+      "timestamp": 1794593496,
+      "sender": "0x901f482CDAd9c06af11bbbAbE6E663f1172251C2",
+      "to": "0x4b557207daaa63505fe5198ff4a6bf64c38a1e5d",
+      "input": "0x379607f50000000000000000000000000000000000000000000000000000000000000001",
+      "gasUsed": "65092",
+      "gasPriceWei": "1000000000",
+      "executionFeeWei": "65092000000000",
+      "l1FeeWei": "0",
+      "otherFeeWei": "0",
+      "totalFeeWei": "65092000000000",
+      "senderBalanceBeforeWei": "260703582302968068",
+      "senderBalanceAfterWei": "260638490302968068",
+      "receiptFeeFields": {
+        "gasUsed": "0xfe44",
+        "effectiveGasPrice": "0x3b9aca00"
+      }
+    }
+  ],
+  "agreementId": "1",
+  "finalState": {
+    "status": "Cancelled",
+    "claimedAmount": "4236111",
+    "vestedAmount": "4236111",
+    "claimableAmount": "0"
+  }
+}

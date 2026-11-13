@@ -1,0 +1,13 @@
+{
+  "chainId": 11155111,
+  "l2ChainId": 84532,
+  "bridge": "0xfd0Bf71F60660E2f608ed56e1659C450eB113120",
+  "recipient": "0x901f482CDAd9c06af11bbbAbE6E663f1172251C2",
+  "valueWei": "5000000000000000",
+  "transactionHash": "0xfbbebd55198b01677faf6a350aa2fc6562711bc3424093857dc4ffd3c971aba9",
+  "source": "https://docs.base.org/specifications/reference/base-contracts",
+  "blockNumber": 12127633,
+  "gasUsed": "635747",
+  "gasPriceWei": "19",
+  "feeWei": "12079193"
+}

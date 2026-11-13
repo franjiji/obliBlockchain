@@ -1,0 +1,10 @@
+{
+  "beneficiary": "0x901f482CDAd9c06af11bbbAbE6E663f1172251C2",
+  "totalAmount": "100000000",
+  "mintAmount": "1000000000",
+  "startTime": 1794589824,
+  "cliffTime": 1794591624,
+  "endTime": 1794676224,
+  "revocable": true,
+  "description": "100 mUSD, periodo 24 h, cliff a los 30 min; inicio 1 h antes de generar parametros"
+}

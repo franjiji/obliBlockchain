@@ -25,7 +25,7 @@ docs/        Documento de arquitectura, declaración de uso de IA y letra
 
 ## Requisitos
 
-- Node.js 20+ y npm
+- Node.js 22.13.0 o posterior y npm (probado con Node.js 24.11.1)
 - MetaMask (u otra billetera EVM) para usar la dApp
 
 ## Instalación
@@ -50,6 +50,34 @@ npx hardhat run scripts/deploy.js --network localhost
 El script imprime las direcciones, regala 100.000 mUSD a las primeras 5 cuentas de la red local y
 escribe `frontend/src/contracts/` (direcciones y ABI) para que la dApp los use.
 **Hay que volver a desplegar cada vez que se reinicia `npx hardhat node`.**
+
+### Sepolia y Base Sepolia (desafio D)
+
+Completar `.env` a partir de `.env.example` con `SEPOLIA_RPC_URL`,
+`BASE_SEPOLIA_RPC_URL` y `DEPLOYER_PRIVATE_KEY` de una cuenta exclusiva de pruebas.
+La configuracion carga `.env` automaticamente; nunca se sube a Git.
+La cuenta necesita ETH de prueba en cada red. `ETHERSCAN_API_KEY` no es necesaria
+para desplegar, solo para publicar/verificar codigo fuente en un explorador.
+
+```bash
+npx hardhat run scripts/deploy.js --network sepolia
+npx hardhat run scripts/deploy.js --network baseSepolia
+npx hardhat run scripts/medir-costos.js --network sepolia
+npx hardhat run scripts/medir-costos.js --network baseSepolia
+node scripts/generar-comparacion.js
+```
+
+Los despliegues publicos no reparten tokens automaticamente. Los scripts conservan
+un registro publico por red en `docs/despliegues/` y `docs/mediciones/` para reanudar
+sin repetir transacciones confirmadas. El mismo archivo de parametros se usa en ambas redes.
+Para una muestra nueva, archivar primero todos los registros de la muestra anterior.
+
+El frontend usa el ultimo `frontend/src/contracts/deployment.json` generado.
+Para usar los contratos existentes sin volver a desplegar, seguir
+[DESPLIEGUE_SEPOLIA.md](docs/DESPLIEGUE_SEPOLIA.md). Base Sepolia tiene chain ID `84532`;
+se debe agregar esa red a MetaMask manualmente usando los datos de la documentacion oficial
+de Base, enlazada en [COMPARACION_L2.md](docs/COMPARACION_L2.md).
+El script `advance-time.js` es exclusivo de la red local.
 
 ## Ejecutar la dApp
 
@@ -77,4 +105,6 @@ npx hardhat test --coverage   # tests + reporte de cobertura de líneas
 
 - [Arquitectura](docs/ARQUITECTURA.md)
 - [Declaración de uso de IA](docs/DECLARACION_IA.md)
+- [Despliegue actualizado en Sepolia con cliff](docs/DESPLIEGUE_SEPOLIA.md)
+- [Comparacion real de costos Sepolia vs Base Sepolia](docs/COMPARACION_L2.md)
 - [Letra del obligatorio](docs/letra-obligatorio.md)
