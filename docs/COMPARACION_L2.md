@@ -99,7 +99,7 @@ se registra aparte en `docs/mediciones/fondeo-base.json` y no se suma a cada ope
 Los scripts guardan hashes antes de esperar y reanudan registros existentes; no vuelven a
 enviar operaciones confirmadas. Para una muestra nueva, archivar primero los JSON de ambas
 redes y parametros compartidos, y crear nuevos despliegues. Nunca mezclar datos de muestras.
-El frontend usa el ultimo deployment.json generado; los registros por red se conservan en docs.
+La dApp elige los contratos segun la red de la billetera (ver README); los registros por red se conservan en docs.
 
 ## Fuentes primarias
 

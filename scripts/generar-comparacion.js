@@ -139,7 +139,7 @@ se registra aparte en \`docs/mediciones/fondeo-base.json\` y no se suma a cada o
 Los scripts guardan hashes antes de esperar y reanudan registros existentes; no vuelven a
 enviar operaciones confirmadas. Para una muestra nueva, archivar primero los JSON de ambas
 redes y parametros compartidos, y crear nuevos despliegues. Nunca mezclar datos de muestras.
-El frontend usa el ultimo deployment.json generado; los registros por red se conservan en docs.
+La dApp elige los contratos segun la red de la billetera (ver README); los registros por red se conservan en docs.
 
 ## Fuentes primarias
 
@@ -162,14 +162,13 @@ al contrato sin cliff. No usar el ABI nuevo contra aquellos contratos antiguos.
 - Registro de transacciones: [despliegues/sepolia.json](despliegues/sepolia.json).
 - [Mediciones y comparacion L2](COMPARACION_L2.md).
 
-Crear \`frontend/src/contracts/deployment.json\` con:
+La dApp trae estas direcciones en \`frontend/src/contracts/deployment.sepolia.json\` y las usa
+sola cuando MetaMask esta en Sepolia: no hace falta ejecutar nada mas. Si se vuelve a desplegar
+en Sepolia, actualizar ese archivo con \`chainId\`, \`vesting\`, \`token\` y \`deployBlock\`
+de \`docs/despliegues/sepolia.json\`.
 
-\`\`\`json
-${JSON.stringify({chainId:11155111,vesting:l1.vesting,token:l1.token,deployBlock:l1.deployBlock},null,2)}
-\`\`\`
-
-Los ABI versionados corresponden a la version con cliff. Para usar Base Sepolia, tomar
-los valores equivalentes de \`docs/despliegues/baseSepolia.json\`.
+Los ABI versionados corresponden a la version con cliff. Base Sepolia no esta configurada en la
+dApp: solo se uso para medir costos.
 La comprobacion de bytecode por RPC no implica publicacion del codigo fuente en Etherscan.
 \`.env\` no se comparte ni se sube a Git.
 `);

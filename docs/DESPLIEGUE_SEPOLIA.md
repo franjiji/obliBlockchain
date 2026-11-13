@@ -11,18 +11,12 @@ al contrato sin cliff. No usar el ABI nuevo contra aquellos contratos antiguos.
 - Registro de transacciones: [despliegues/sepolia.json](despliegues/sepolia.json).
 - [Mediciones y comparacion L2](COMPARACION_L2.md).
 
-Crear `frontend/src/contracts/deployment.json` con:
+La dApp trae estas direcciones en `frontend/src/contracts/deployment.sepolia.json` y las usa
+sola cuando MetaMask esta en Sepolia: no hace falta ejecutar nada mas. Si se vuelve a desplegar
+en Sepolia, actualizar ese archivo con `chainId`, `vesting`, `token` y `deployBlock` de
+`docs/despliegues/sepolia.json`.
 
-```json
-{
-  "chainId": 11155111,
-  "vesting": "0x4b557207Daaa63505fE5198FF4A6Bf64c38a1E5d",
-  "token": "0xbFcE372F590fc9b0028DFF35DdbBf064C9e7CcF7",
-  "deployBlock": 12127651
-}
-```
-
-Los ABI versionados corresponden a la version con cliff. Para usar Base Sepolia, tomar
-los valores equivalentes de `docs/despliegues/baseSepolia.json`.
+Los ABI versionados corresponden a la version con cliff. Base Sepolia no esta configurada en la
+dApp: solo se uso para medir costos.
 La comprobacion de bytecode por RPC no implica publicacion del codigo fuente en Etherscan.
 `.env` no se comparte ni se sube a Git.

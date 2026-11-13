@@ -4,26 +4,43 @@ Obligatorio Blockchain 2026 — dApp de pagos de sueldo / vesting lineal en ERC-
 
 ## 1. Diagrama de componentes
 
+![Diagrama de componentes](diagrama-componentes.png)
+
+Componentes principales y cómo se relacionan:
+
+| Componente | Responsabilidad |
+|---|---|
+| **Frontend dApp** (React + Vite) | Las 4 pantallas (Crear acuerdo, Acuerdos creados, Mis ingresos, Detalle) y el estado de las transacciones. No tiene backend propio. |
+| **ethers.js v6** | Biblioteca de conexión Web3: crea el proveedor a partir de la billetera, instancia los contratos con su ABI, lee estado y eventos. |
+| **Billetera (MetaMask)** | Guarda las claves, informa cuenta y red conectadas y firma cada transacción. |
+| **VestingPayroll** | Smart contract que gestiona los acuerdos: guarda los fondos y aplica las reglas de creación, vesting, reclamo y cancelación. |
+| **Contrato ERC-20** | Token con el que se paga. `VestingPayroll` lo recibe con `transferFrom` y lo entrega con `transfer`. |
+
+La dApp funciona sobre dos redes y elige los contratos según la red de la billetera: Hardhat local (para desarrollo y pruebas) y Ethereum Sepolia (despliegue público).
+
+<details>
+<summary>Fuente del diagrama (Mermaid)</summary>
+
 ```mermaid
 flowchart LR
-    subgraph Usuario
-        W[Billetera MetaMask]
+    subgraph NAV["Navegador del usuario"]
+        FE["Frontend dApp (React + Vite)"]
+        ETH["ethers.js v6"]
+        WAL["Billetera (MetaMask)"]
     end
-    subgraph Frontend["dApp (React + Vite + ethers v6)"]
-        UI[4 pantallas: Crear, Creados, Mis ingresos, Detalle]
-        LIB[lib: wallet, tx, agreements, format]
+    subgraph RED["Red EVM: Hardhat local o Ethereum Sepolia"]
+        VP["VestingPayroll"]
+        TK["Contrato ERC-20"]
     end
-    subgraph Cadena["Red EVM (Hardhat local / testnet)"]
-        VP[VestingPayroll]
-        TK[Token ERC-20]
-    end
-    UI --> LIB
-    LIB -- "BrowserProvider / signer" --> W
-    W -- "tx firmadas" --> VP
-    W -- "tx firmadas" --> TK
-    LIB -- "lecturas y eventos (RPC)" --> VP
-    VP -- "transferFrom / transfer / balanceOf" --> TK
+    FE --> ETH
+    ETH --> WAL
+    WAL -->|"createAgreement, claim, cancel"| VP
+    WAL -->|"approve"| TK
+    ETH -->|"lecturas y eventos (RPC)"| VP
+    VP -->|"transferFrom / transfer"| TK
 ```
+
+</details>
 
 Flujo de fondos:
 

@@ -35,7 +35,7 @@ function TxList() {
 }
 
 export default function App() {
-  const { hasWallet, account, chainName, chainOk, expectedChainName, error, connecting, connect, switchNetwork } = useWallet();
+  const { hasWallet, account, chainId, chainName, chainOk, supportedChains, error, connecting, connect, switchNetwork } = useWallet();
   const [tab, setTab] = useState("home");
   const [detailId, setDetailId] = useState(null);
 
@@ -44,7 +44,14 @@ export default function App() {
 
   let content;
   if (!hasWallet || !account) content = <Welcome hasWallet={hasWallet} connecting={connecting} connect={connect} />;
-  else if (!chainOk) content = <div className="card"><p className="error">Estás en la red «{chainName}», pero la dApp está desplegada en «{expectedChainName}».</p><button className="primary" onClick={switchNetwork}>Cambiar a {expectedChainName}</button></div>;
+  else if (!chainOk) content = (
+    <div className="card">
+      <p className="error">Estás en la red «{chainName}», pero la dApp solo está desplegada en: {supportedChains.map((c) => c.name).join(" y ")}.</p>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        {supportedChains.map((c) => <button key={c.chainId} className="primary" onClick={() => switchNetwork(c.chainId)}>Cambiar a {c.name}</button>)}
+      </div>
+    </div>
+  );
   else if (tab === "home") content = <Welcome hasWallet account={account} onStart={() => goTab("create")} />;
   else if (tab === "detail") content = <Detail id={detailId} onBack={() => goTab("created")} />;
   else if (tab === "create") content = <CreateAgreement onCreated={() => goTab("created")} />;
@@ -59,7 +66,10 @@ export default function App() {
           {account ? (
             <>
               <span className={`dot ${chainOk ? "ok" : "bad"}`} />
-              <span>{chainName}</span>
+              <select className="net" aria-label="Red" value={chainOk ? chainId : ""} onChange={(e) => switchNetwork(Number(e.target.value))}>
+                {!chainOk && <option value="">{chainName}</option>}
+                {supportedChains.map((c) => <option key={c.chainId} value={c.chainId}>{c.name}</option>)}
+              </select>
               <code title={account}>{shortAddr(account)}</code>
             </>
           ) : (
@@ -75,7 +85,7 @@ export default function App() {
           ))}
         </nav>
       )}
-      <main>{content}</main>
+      <main key={chainId}>{content}</main>
       <TxList />
     </div>
   );

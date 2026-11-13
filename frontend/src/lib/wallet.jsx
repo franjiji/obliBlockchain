@@ -1,6 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { BrowserProvider, getAddress } from "ethers";
-import { deployment, LOCAL_CHAIN_PARAMS, NETWORK_NAMES } from "./config.js";
+import { deployments, setDeployment, LOCAL_CHAIN_PARAMS, NETWORK_NAMES } from "./config.js";
+
+const SUPPORTED = Object.keys(deployments).map(Number).map((chainId) => ({ chainId, name: NETWORK_NAMES[chainId] ?? `Red ${chainId}` }));
 
 const Ctx = createContext(null);
 export const useWallet = () => useContext(Ctx);
@@ -19,6 +21,7 @@ export function WalletProvider({ children }) {
     const accounts = await eth.request({ method: "eth_accounts" });
     const bp = new BrowserProvider(eth);
     const net = await bp.getNetwork();
+    setDeployment(Number(net.chainId)); // antes de actualizar el estado, para que los hijos ya vean los contratos de esta red
     setProvider(bp);
     setChainId(Number(net.chainId));
     setAccount(accounts[0] ? getAddress(accounts[0]) : null);
@@ -52,12 +55,12 @@ export function WalletProvider({ children }) {
     }
   }, [eth, sync]);
 
-  const switchNetwork = useCallback(async () => {
-    const hexId = "0x" + deployment.chainId.toString(16);
+  const switchNetwork = useCallback(async (target) => {
+    const hexId = "0x" + target.toString(16);
     try {
       await eth.request({ method: "wallet_switchEthereumChain", params: [{ chainId: hexId }] });
     } catch (e) {
-      if (e.code === 4902 && deployment.chainId === 31337) {
+      if (e.code === 4902 && target === 31337) {
         await eth.request({ method: "wallet_addEthereumChain", params: [LOCAL_CHAIN_PARAMS] });
       } else {
         setError(e.message);
@@ -72,8 +75,8 @@ export function WalletProvider({ children }) {
       account,
       chainId,
       chainName: chainId ? (NETWORK_NAMES[chainId] ?? `Red ${chainId}`) : null,
-      chainOk: chainId === deployment.chainId,
-      expectedChainName: NETWORK_NAMES[deployment.chainId] ?? `Red ${deployment.chainId}`,
+      chainOk: chainId in deployments,
+      supportedChains: SUPPORTED,
       error,
       connecting,
       connect,

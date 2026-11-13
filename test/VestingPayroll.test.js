@@ -252,6 +252,22 @@ describe("VestingPayroll", () => {
       expect(await token.balanceOf(await vault.getAddress())).to.equal(vested);
     });
 
+    it("Cancelled es terminal: si el beneficiario cobra todo lo devengado, el acuerdo sigue Cancelled", async () => {
+      const { vault, token, payer, beneficiary, create, at } = await loadFixture(deployFixture);
+      const { id, start, end } = await create();
+      await at(start + DURATION / 2n, () => vault.connect(payer).cancel(id));
+      await time.increaseTo(end + 100n);
+      await vault.connect(beneficiary).claim(id);
+
+      const a = await vault.getAgreement(id);
+      expect(a.claimedAmount).to.equal(TOTAL / 2n); // cobro todo lo devengado al cancelar
+      expect(await vault.claimableAmount(id)).to.equal(0n);
+      expect(a.status).to.equal(Status.Cancelled); // no pasa a Completed
+      await expect(vault.connect(beneficiary).claim(id)).to.be.revertedWithCustomError(vault, "NothingToClaim");
+      await expect(vault.connect(payer).cancel(id)).to.be.revertedWithCustomError(vault, "NotActive");
+      expect(await token.balanceOf(await vault.getAddress())).to.equal(0n);
+    });
+
     it("preserva el saldo devengado luego de cancelar y no sigue devengando", async () => {
       const { vault, token, payer, beneficiary, create, at } = await loadFixture(deployFixture);
       const { id, start, end } = await create();

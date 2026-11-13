@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useWallet } from "../lib/wallet.jsx";
 import { useTx } from "../lib/tx.jsx";
 import { chainNow, fetchHistory, loadAgreement } from "../lib/agreements.js";
+import { EXPLORERS } from "../lib/config.js";
 import { errorMessage, formatAmount, formatDate, shortAddr } from "../lib/format.js";
 import Badge from "./Badge.jsx";
 
@@ -14,7 +15,7 @@ function describe(e, r) {
 }
 
 export default function Detail({ id, onBack }) {
-  const { provider } = useWallet();
+  const { provider, chainId } = useWallet();
   const { refreshKey } = useTx();
   const [data, setData] = useState(null);
   const [history, setHistory] = useState([]);
@@ -85,7 +86,7 @@ export default function Detail({ id, onBack }) {
       <ul className="history">
         {history.map((e) => (
           <li key={`${e.hash}-${e.index}`}>
-            <strong>{e.label}</strong> <span className="muted">· {formatDate(e.timestamp)} · tx {shortAddr(e.hash)}</span>
+            <strong>{e.label}</strong> <span className="muted">· {formatDate(e.timestamp)} · tx {EXPLORERS[chainId] ? <a href={`${EXPLORERS[chainId]}/tx/${e.hash}`} target="_blank" rel="noreferrer">{shortAddr(e.hash)}</a> : shortAddr(e.hash)}</span>
             <div>{describe(e, r)}</div>
           </li>
         ))}

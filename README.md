@@ -71,11 +71,13 @@ un registro publico por red en `docs/despliegues/` y `docs/mediciones/` para rea
 sin repetir transacciones confirmadas. El mismo archivo de parametros se usa en ambas redes.
 Para una muestra nueva, archivar primero todos los registros de la muestra anterior.
 
-El frontend usa el ultimo `frontend/src/contracts/deployment.json` generado.
-Para usar los contratos existentes sin volver a desplegar, seguir
-[DESPLIEGUE_SEPOLIA.md](docs/DESPLIEGUE_SEPOLIA.md). Base Sepolia tiene chain ID `84532`;
-se debe agregar esa red a MetaMask manualmente usando los datos de la documentacion oficial
-de Base, enlazada en [COMPARACION_L2.md](docs/COMPARACION_L2.md).
+**Usar la dApp en Sepolia:** los contratos ya desplegados estan en
+`frontend/src/contracts/deployment.sepolia.json` (direcciones en
+[DESPLIEGUE_SEPOLIA.md](docs/DESPLIEGUE_SEPOLIA.md)). La dApp elige los contratos segun la red
+de la billetera: con MetaMask en Sepolia usa los de Sepolia (no hace falta ejecutar el deploy) y
+con MetaMask en Hardhat Local usa los que genera `scripts/deploy.js` en `deployment.json`.
+Si la red no esta soportada, la dApp ofrece cambiar a una de las dos. Base Sepolia (chain ID `84532`)
+solo se uso para medir costos (ver [COMPARACION_L2.md](docs/COMPARACION_L2.md)).
 El script `advance-time.js` es exclusivo de la red local.
 
 ## Ejecutar la dApp

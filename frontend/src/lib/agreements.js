@@ -44,6 +44,7 @@ async function withRetry(fn, tries = 4) {
 }
 
 export async function queryLogs(contract, filter, key) {
+  key = `${deployment.chainId}:${key}`; // la cache es por red
   const provider = contract.runner.provider ?? contract.runner;
   const latest = Number(await provider.send("eth_blockNumber", []));
   let entry = logCache.get(key);
