@@ -13,6 +13,12 @@ export function formatAmount(value, decimals, symbol = "", maxFrac = decimals) {
   return `${i}${f ? "," + f : ""}${symbol ? " " + symbol : ""}`;
 }
 
+// Listados: 2 decimales, salvo montos menores a 0,01, que se muestran completos (si no, se veria "0" con saldo).
+export function formatList(value, decimals, symbol) {
+  const small = value > 0n && value < 10n ** BigInt(decimals) / 100n;
+  return formatAmount(value, decimals, symbol, small ? decimals : 2);
+}
+
 // Formato fijo dd/mm/aaaa HH:mm (24 h), el mismo en toda la dApp.
 export function formatDate(ts) {
   const d = new Date(Number(ts) * 1000);

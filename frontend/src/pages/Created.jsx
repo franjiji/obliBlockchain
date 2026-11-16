@@ -3,7 +3,7 @@ import { useWallet } from "../lib/wallet.jsx";
 import { useTx } from "../lib/tx.jsx";
 import { useAgreements } from "../lib/useAgreements.js";
 import { vestingContract } from "../lib/agreements.js";
-import { formatAmount, shortAddr } from "../lib/format.js";
+import { formatList, shortAddr } from "../lib/format.js";
 import Badge from "./Badge.jsx";
 
 export default function Created({ onOpen }) {
@@ -45,10 +45,10 @@ export default function Created({ onOpen }) {
                     <td>{String(r.id)}</td>
                     <td title={r.beneficiary}>{shortAddr(r.beneficiary)}</td>
                     <td>
-                      <Badge status={r.status} />
+                      <Badge status={r.status} ended={r.now >= r.end} />
                     </td>
-                    <td>{formatAmount(r.total, r.decimals, r.symbol, 2)}</td>
-                    <td>{formatAmount(r.vested, r.decimals, r.symbol, 2)}</td>
+                    <td>{formatList(r.total, r.decimals, r.symbol)}</td>
+                    <td>{formatList(r.vested, r.decimals, r.symbol)}</td>
                     <td className="actions">
                       <button onClick={() => onOpen(r.id)}>Detalle</button>
                       {canCancel &&

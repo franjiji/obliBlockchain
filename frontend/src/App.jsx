@@ -38,8 +38,9 @@ export default function App() {
   const { hasWallet, account, chainId, chainName, chainOk, supportedChains, error, connecting, connect, switchNetwork } = useWallet();
   const [tab, setTab] = useState("home");
   const [detailId, setDetailId] = useState(null);
+  const [backTab, setBackTab] = useState("created"); // pantalla desde la que se abrio el detalle
 
-  const open = (id) => { setDetailId(id); setTab("detail"); };
+  const open = (id) => { setDetailId(id); setBackTab(tab); setTab("detail"); };
   const goTab = (t) => { setDetailId(null); setTab(t); };
 
   let content;
@@ -53,7 +54,7 @@ export default function App() {
     </div>
   );
   else if (tab === "home") content = <Welcome hasWallet account={account} onStart={() => goTab("create")} />;
-  else if (tab === "detail") content = <Detail id={detailId} onBack={() => goTab("created")} />;
+  else if (tab === "detail") content = <Detail id={detailId} onBack={() => goTab(backTab)} />;
   else if (tab === "create") content = <CreateAgreement onCreated={() => goTab("created")} />;
   else if (tab === "created") content = <Created onOpen={open} />;
   else content = <Income onOpen={open} />;

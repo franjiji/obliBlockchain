@@ -10,7 +10,7 @@ Componentes principales y cómo se relacionan:
 
 | Componente | Responsabilidad |
 |---|---|
-| **Frontend dApp** (React + Vite) | Las 4 pantallas (Crear acuerdo, Acuerdos creados, Mis ingresos, Detalle) y el estado de las transacciones. No tiene backend propio. |
+| **Frontend dApp** (React + Vite) | Las 4 pantallas (Crear acuerdo, Acuerdos creados, Mis ingresos, Detalle) y el estado de las transacciones. Usa la hora de la cadena para las fechas y los avisos. No tiene backend propio. |
 | **ethers.js v6** | Biblioteca de conexión Web3: crea el proveedor a partir de la billetera, instancia los contratos con su ABI, lee estado y eventos. |
 | **Billetera (MetaMask)** | Guarda las claves, informa cuenta y red conectadas y firma cada transacción. |
 | **VestingPayroll** | Smart contract que gestiona los acuerdos: guarda los fondos y aplica las reglas de creación, vesting, reclamo y cancelación. |
@@ -107,6 +107,8 @@ stateDiagram-v2
 
 Un acuerdo `Cancelled` se queda en ese estado aunque el beneficiario cobre todo lo devengado; no pasa a `Completed`.
 
+El tiempo por sí solo no cambia el estado: pasado `endTime` el acuerdo sigue `Active` hasta que el beneficiario cobra el total con `claim`, y recién ahí pasa a `Completed`. En ese lapso ya no se puede cancelar (`AlreadyEnded`), y la dApp lo muestra como «Finalizado (pendiente de cobro)».
+
 ## 5. Fórmula de vesting
 
 ```
@@ -144,7 +146,7 @@ IERC20 token;                                                                   
 uint128 totalAmount; uint128 claimedAmount;                                      // 32 bytes
 ```
 
-Sin empaquetar serían 10 slots; con el orden elegido son 4. Crear un acuerdo escribe 4 slots en vez de 10 (cada `SSTORE` en un slot nuevo cuesta ~22.100 gas). El `cliffTime` entra en el espacio libre del slot 1, así que agregar el cliff no costó ningún slot extra. En `claim`, `claimedAmount` y `totalAmount` comparten slot, así que se leen y escriben juntos.
+Sin empaquetar serían 11 slots (uno por campo); con el orden elegido son 4. Crear un acuerdo escribe 4 slots en vez de 11 (cada `SSTORE` en un slot nuevo cuesta ~22.100 gas). El `cliffTime` entra en el espacio libre del slot 1, así que agregar el cliff no costó ningún slot extra. En `claim`, `claimedAmount` y `totalAmount` comparten slot, así que se leen y escriben juntos.
 
 **b) `storage` como puntero en `claim` y `cancel`.**
 
@@ -181,14 +183,14 @@ El nuevo total se calcula una vez en una variable local (stack) y se reutiliza p
 
 | Riesgo | Mitigación |
 |---|---|
-| **Reentrancia** | `ReentrancyGuard` (`nonReentrant`) en `createAgreement`, `claim` y `cancel`, además de seguir el orden **checks → effects → interactions**: `claimedAmount` y `status` se actualizan antes de cualquier transferencia. Test con `ReentrantToken` + `ReentrantBeneficiary`. |
+| **Reentrancia** | `ReentrancyGuard` (`nonReentrant`) en `createAgreement`, `claim` y `cancel`, además de seguir el orden **checks → effects → interactions**: `claimedAmount` y `status` se actualizan antes de cualquier transferencia. Tests con `ReentrantToken` + `ReentrantBeneficiary`: verifican que la reentrada revierte con `ReentrancyGuardReentrantCall`, también al intentar reclamar otro acuerdo (caso que el orden CEI solo no frena). |
 | **Doble cobro** | `claim` paga `vested - claimed` y actualiza `claimed` antes de transferir; un segundo reclamo inmediato revierte con `NothingToClaim`. |
 | **Reclamo por un tercero** | Solo `msg.sender == beneficiary` puede reclamar (`NotBeneficiary`). |
 | **Cancelación por un tercero / no revocable** | Solo el pagador, solo si `revocable` y `Active`, y nunca después de `endTime` (`NotPayer`, `NotRevocable`, `NotActive`, `AlreadyEnded`). |
 | **Tokens que no devuelven `bool` / fallan en silencio** | `SafeERC20` (`safeTransfer`, `safeTransferFrom`). |
 | **Fee-on-transfer** (llegaría menos de lo declarado y el acuerdo quedaría sub-fondeado) | Se mide `balanceOf` antes y después de `transferFrom` y se revierte con `UnexpectedTransferAmount` si no coincide. |
 | **Overflow / redondeo** | Solidity 0.8 revierte en overflow; los cálculos intermedios usan `uint256`; redondeo hacia abajo; límites probados con `type(uint128).max` y `type(uint40).max`. |
-| **Datos inválidos** | `InvalidBeneficiary`, `InvalidToken`, `InvalidAmount`, `InvalidTimeRange`. |
+| **Datos inválidos** | `InvalidBeneficiary` (dirección cero), `InvalidToken`, `InvalidAmount`, `InvalidTimeRange`, `InvalidCliff`. |
 | **Fondos atrapados por administración** | No hay owner, pausa ni funciones de rescate: el contrato no tiene una puerta trasera, pero tampoco un botón de emergencia (ver limitaciones). |
 | **Errores baratos y legibles** | Custom errors con parámetros en lugar de `require` con strings. |
 
@@ -205,7 +207,7 @@ El frontend usa `payer` y `beneficiary` indexados para construir «Acuerdos crea
 
 ## 9. Principales casos de borde
 
-- **Inicio en el pasado:** se permite. Parte del monto queda disponible apenas se crea (útil para pagar sueldos ya devengados). La dApp avisa al usuario.
+- **Inicio en el pasado:** se permite. Parte del monto queda disponible apenas se crea (útil para pagar sueldos ya devengados). La dApp avisa al usuario, comparando con la hora del último bloque de la cadena (no con la del navegador), que es la que usa el contrato.
 - **Fin en el pasado:** también permitido; todo el monto es reclamable de inmediato.
 - **`end <= start`:** revierte con `InvalidTimeRange`.
 - **Cliff fuera de `[start, end]`:** revierte con `InvalidCliff`. Con `cliff == start` no hay cliff; con `cliff == end` todo se libera al final.
@@ -221,19 +223,22 @@ El frontend usa `payer` y `beneficiary` indexados para construir «Acuerdos crea
 - **Montos y fechas en el máximo de su tipo:** no hay overflow (`uint128 * uint40` cabe en `uint256`).
 - **Id inexistente (incluido el 0):** `AgreementNotFound`.
 - **Beneficiario = pagador:** el contrato lo permite (no hay riesgo para terceros).
+- **Beneficiario = el propio contrato:** el contrato lo acepta, pero nadie puede reclamar y lo devengado queda atrapado; solo vuelve lo no devengado si el pagador cancela un acuerdo revocable antes del fin. La dApp lo rechaza antes de enviar (ver limitaciones).
 - **Token sin comisión vs. con comisión:** el segundo se rechaza.
 
 ## 10. Limitaciones conocidas
 
 - **Sin pausa, sin upgrades ni lotes:** el contrato implementa el vesting lineal con cliff opcional y nada más.
 - **Sin recuperación de fondos:** si un token bloquea transferencias (lista negra, pausa) hacia el beneficiario, `claim` revierte y esos fondos quedan en el contrato. Tampoco hay forma de rescatar tokens enviados por error.
+- **Beneficiario = el propio contrato:** `createAgreement` solo rechaza la dirección cero. Si el beneficiario es el propio `VestingPayroll`, nadie puede reclamar y lo devengado queda atrapado (hay un test que lo documenta). La dApp lo rechaza, pero una llamada directa al contrato no. No se corrigió porque el contrato ya está desplegado en Sepolia.
+- **Código no verificado en Etherscan:** el bytecode desplegado se comparó por RPC con el compilado, pero el código fuente no está publicado ni verificado en el explorador.
 - **Tokens no soportados:** fee-on-transfer (rechazados), rebasing y tokens con hooks inusuales (no probados).
 - **Dependencia del timestamp:** `block.timestamp` puede ser ajustado por el validador unos segundos; irrelevante para vestings de días o meses, pero importa para duraciones muy cortas.
 - **Frontend:**
   - Los listados reconstruyen el índice desde eventos con `getLogs`. Los RPC públicos limitan el rango de bloques y la cantidad de resultados; la dApp pide por tramos, reintenta y guarda un caché incremental, pero en una red con mucho historial lo correcto sería un indexador (por ejemplo The Graph).
   - Cada actualización hace ~2 llamadas de lectura por acuerdo, sin multicall ni paginación.
   - La actualización automática es por polling (cada 30 s con la pestaña visible), no por suscripción.
-- **Pruebas:** la prueba manual de la dApp con MetaMask se hizo en una red local de Hardhat. Los contratos con cliff están desplegados en Sepolia y Base Sepolia (ver `docs/DESPLIEGUE_SEPOLIA.md` y `docs/COMPARACION_L2.md`) y allí se ejecutaron las operaciones principales con scripts, pero la dApp no se volvió a probar a mano en esas redes.
+- **Pruebas:** la dApp se probó a mano con MetaMask en una red local de Hardhat y en Sepolia, donde se creó, se reclamó y se canceló un acuerdo desde la interfaz. En Base Sepolia las operaciones se ejecutaron solo con scripts para medir costos (ver `docs/DESPLIEGUE_SEPOLIA.md` y `docs/COMPARACION_L2.md`); la dApp no está configurada para esa red.
 - **Auditoría:** el código no fue auditado por terceros.
 
 ## 11. Comparación conceptual Ethereum L1 vs L2
@@ -258,9 +263,9 @@ Mismo bytecode y mismos parámetros en ambas redes (detalle, recibos y links en 
 | `cancel` | 81.526 | 58.326 | 0,000081526 | 0,00000035 |
 | **Flujo completo** | | | **0,000988268** | **0,00000202** |
 
-- En esta muestra el flujo completo costó unas **489 veces menos** en Base Sepolia (99,8 % de ahorro). La causa principal es el precio del gas (1 gwei en Sepolia contra 0,006 gwei en Base) y, en menor medida, que en este caso se usó menos gas.
+- En esta muestra el flujo completo costó unas **489 veces menos** en Base Sepolia (99,8 % de ahorro). Separando con los números de la tabla: el precio del gas fue 166,7 veces menor (1 gwei en Sepolia contra 0,006 gwei en Base) y se usó 2,93 veces menos gas (988.268 contra 337.144); 166,7 × 2,93 ≈ 489.
 - El cargo extra de la L2 por publicar los datos en L1 (`l1Fee`) fue despreciable en la muestra (menos del 0,2 % del total de cada operación), pero hay que incluirlo en la cuenta.
-- El gas usado difiere entre redes. Al desplegar en una cadena local de Hardhat, `MockUSD` usó 507.908 gas, igual que en Base Sepolia, así que ese valor corresponde al contrato; la diferencia de Sepolia se debe a las reglas de gas de esa red, y no se verificó su causa exacta.
+- El gas usado difiere entre redes. Al desplegar en una cadena local de Hardhat, `MockUSD` usó 507.908 gas, igual que en Base Sepolia, así que ese valor corresponde al contrato. Sepolia activó el 6/10/2026 la actualización Glamsterdam, que incluye EIP-8037: encarece y mide aparte el gas por crear estado nuevo (desplegar contratos, escribir slots nuevos). Coincide con lo medido: lo que más subió fueron los despliegues (6,94 veces `VestingPayroll`) y `createAgreement` (3,99 veces, escribe 4 slots nuevos), y mucho menos `claim` y `cancel`, que modifican slots existentes. No se comprobó transacción por transacción. Mainnet todavía no activó Glamsterdam y en Base Sepolia el gas coincidió con el de una red local sin ese cambio, así que hoy los costos de Sepolia no representan a mainnet.
 - Es una sola muestra en testnets: los precios cambian con la demanda y no son una cotización de mainnet.
 
 **Conclusión para este caso de uso.** Un sistema de sueldos paga montos chicos y repetidos, y se quiere que el beneficiario pueda reclamar seguido. Los costos de L1 hacen poco práctico reclamar con alta frecuencia, así que una L2 (por ejemplo Base, Arbitrum u Optimism) es la elección natural para producción. L1 sigue siendo preferible cuando se priorizan la finalidad inmediata y la mínima confianza sobre los costos, por ejemplo para acuerdos de montos grandes y vesting de largo plazo, donde se reclama pocas veces. El contrato es idéntico en ambas, ya que es compatible con la EVM; solo cambian el RPC y el chainId.

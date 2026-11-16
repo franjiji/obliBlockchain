@@ -96,9 +96,39 @@ describe("VestingPayroll", () => {
       await expect(v.createAgreement(beneficiary.address, tokenAddr, TOTAL, e, e, s, true)).to.be.revertedWithCustomError(vault, "InvalidTimeRange"); // end < start
     });
 
+    it("acepta al propio contrato como beneficiario y los fondos quedan atrapados (limitacion conocida)", async () => {
+      const { vault, token, payer, create } = await loadFixture(deployFixture);
+      const vaultAddr = await vault.getAddress();
+      const { id, end } = await create({ to: vaultAddr, revocable: false });
+      await time.increaseTo(end + 1n);
+
+      // el contrato no puede llamar a claim y el pagador no puede reclamar ni cancelar
+      await expect(vault.connect(payer).claim(id)).to.be.revertedWithCustomError(vault, "NotBeneficiary").withArgs(id, payer.address);
+      await expect(vault.connect(payer).cancel(id)).to.be.revertedWithCustomError(vault, "NotRevocable").withArgs(id);
+      expect(await token.balanceOf(vaultAddr)).to.equal(TOTAL);
+    });
+
+    it("permite que el beneficiario sea el mismo pagador", async () => {
+      const { vault, token, payer, create, at } = await loadFixture(deployFixture);
+      const { id, start } = await create({ to: payer.address });
+      const before = await token.balanceOf(payer.address);
+      await at(start + DURATION / 2n, () => vault.connect(payer).claim(id));
+      expect(await token.balanceOf(payer.address)).to.equal(before + TOTAL / 2n);
+    });
+
     it("revierte si no hay allowance suficiente", async () => {
       const { vault, token, other, beneficiary } = await loadFixture(deployFixture);
       await token.mint(other.address, TOTAL); // tiene saldo pero nunca hizo approve
+      const now = BigInt(await time.latest());
+      await expect(
+        vault.connect(other).createAgreement(beneficiary.address, await token.getAddress(), TOTAL, now + 100n, now + 100n, now + 100n + DURATION, true),
+      ).to.be.revertedWithCustomError(token, "ERC20InsufficientAllowance");
+    });
+
+    it("revierte si el allowance es parcial (mayor que 0 pero menor al total)", async () => {
+      const { vault, token, other, beneficiary } = await loadFixture(deployFixture);
+      await token.mint(other.address, TOTAL);
+      await token.connect(other).approve(await vault.getAddress(), TOTAL - 1n);
       const now = BigInt(await time.latest());
       await expect(
         vault.connect(other).createAgreement(beneficiary.address, await token.getAddress(), TOTAL, now + 100n, now + 100n, now + 100n + DURATION, true),
@@ -228,6 +258,14 @@ describe("VestingPayroll", () => {
       await expect(vault.connect(other).claim(id)).to.be.revertedWithCustomError(vault, "NotBeneficiary").withArgs(id, other.address);
       await expect(vault.connect(payer).claim(id)).to.be.revertedWithCustomError(vault, "NotBeneficiary").withArgs(id, payer.address);
     });
+
+    it("claim y cancel revierten con AgreementNotFound para un id inexistente", async () => {
+      const { vault, payer, beneficiary, create } = await loadFixture(deployFixture);
+      await create(); // existe solo el id 1
+      await expect(vault.connect(beneficiary).claim(0n)).to.be.revertedWithCustomError(vault, "AgreementNotFound").withArgs(0n);
+      await expect(vault.connect(beneficiary).claim(2n)).to.be.revertedWithCustomError(vault, "AgreementNotFound").withArgs(2n);
+      await expect(vault.connect(payer).cancel(2n)).to.be.revertedWithCustomError(vault, "AgreementNotFound").withArgs(2n);
+    });
   });
 
   // ───────────────────────── Cancelacion ─────────────────────────
@@ -330,6 +368,30 @@ describe("VestingPayroll", () => {
 
       await vault.connect(beneficiary).claim(b.id); // pasa a Completed
       await expect(vault.connect(payer).cancel(b.id)).to.be.revertedWithCustomError(vault, "NotActive").withArgs(b.id, Status.Completed);
+    });
+
+    it("se puede cancelar en endTime - 1, pero no en endTime", async () => {
+      const { vault, payer, create, at } = await loadFixture(deployFixture);
+      const a = await create();
+      const b = await create();
+
+      await expect(at(a.end - 1n, () => vault.connect(payer).cancel(a.id)))
+        .to.emit(vault, "AgreementCancelled")
+        .withArgs(a.id, payer.address, (TOTAL * (DURATION - 1n)) / DURATION, TOTAL - (TOTAL * (DURATION - 1n)) / DURATION);
+
+      await expect(at(b.end, () => vault.connect(payer).cancel(b.id)))
+        .to.be.revertedWithCustomError(vault, "AlreadyEnded")
+        .withArgs(b.id);
+    });
+
+    it("vestedAmountAt de un cancelado: antes de la cancelacion sigue la curva, despues queda congelado", async () => {
+      const { vault, payer, create, at } = await loadFixture(deployFixture);
+      const { id, start } = await create();
+      await at(start + 500n, () => vault.connect(payer).cancel(id)); // 50%
+
+      expect(await vault.vestedAmountAt(id, start + 200n)).to.equal((TOTAL * 2n) / 10n); // antes: 20%
+      expect(await vault.vestedAmountAt(id, start + 500n)).to.equal(TOTAL / 2n);
+      expect(await vault.vestedAmountAt(id, start + 800n)).to.equal(TOTAL / 2n); // despues: congelado
     });
   });
 
@@ -471,27 +533,46 @@ describe("VestingPayroll", () => {
 
   // ───────────────────────── Reentrancy ─────────────────────────
   describe("seguridad: reentrancy", () => {
-    it("un beneficiario malicioso no logra reclamar dos veces desde el callback del token", async () => {
-      const { vault, payer } = await loadFixture(deployFixture);
+    // Token con callback + beneficiario malicioso, con 2 acuerdos (ids 1 y 2) a favor del atacante.
+    async function reentrancyFixture() {
+      const base = await deployFixture();
+      const { vault, payer } = base;
       const rtoken = await ethers.deployContract("ReentrantToken");
       const attacker = await ethers.deployContract("ReentrantBeneficiary", [await vault.getAddress()]);
-      await rtoken.mint(payer.address, TOTAL);
-      await rtoken.connect(payer).approve(await vault.getAddress(), TOTAL);
+      await rtoken.mint(payer.address, 2n * TOTAL);
+      await rtoken.connect(payer).approve(await vault.getAddress(), 2n * TOTAL);
 
       const now = BigInt(await time.latest());
       const start = now + 100n;
       const end = start + DURATION;
-      await vault.connect(payer).createAgreement(await attacker.getAddress(), await rtoken.getAddress(), TOTAL, start, start, end, false);
-      const id = await vault.agreementCount();
+      for (let i = 0; i < 2; i++) {
+        await vault.connect(payer).createAgreement(await attacker.getAddress(), await rtoken.getAddress(), TOTAL, start, start, end, false);
+      }
+      // Nombre del error con el que revirtio la reentrada (el token guarda el motivo del revert)
+      const hookError = async () => vault.interface.parseError(await rtoken.lastHookRevert())?.name;
+      return { ...base, rtoken, attacker, end, hookError };
+    }
 
+    it("un beneficiario malicioso no logra reclamar dos veces desde el callback del token", async () => {
+      const { vault, rtoken, attacker, end, hookError } = await loadFixture(reentrancyFixture);
       await time.increaseTo(end + 1n);
-      await attacker.attack(id); // el claim externo tiene exito...
+      await attacker.attack(1n, 1n); // reclama el acuerdo 1 y desde el callback intenta reclamarlo otra vez
 
-      expect(await attacker.reentryAttempts()).to.equal(1n); // ...el token le dio la chance de reentrar...
-      expect(await attacker.reentrySuccesses()).to.equal(0n); // ...pero la reentrada fue bloqueada
+      // la reentrada la frena nonReentrant (sin el guard, el error seria NothingToClaim)
+      expect(await hookError()).to.equal("ReentrancyGuardReentrantCall");
       expect(await rtoken.balanceOf(await attacker.getAddress())).to.equal(TOTAL); // cobro una sola vez
-      expect(await rtoken.balanceOf(await vault.getAddress())).to.equal(0n);
-      expect((await vault.getAgreement(id)).claimedAmount).to.equal(TOTAL);
+      expect((await vault.getAgreement(1n)).claimedAmount).to.equal(TOTAL);
+    });
+
+    it("nonReentrant tambien bloquea reentrar para reclamar otro acuerdo", async () => {
+      const { vault, rtoken, attacker, end, hookError } = await loadFixture(reentrancyFixture);
+      await time.increaseTo(end + 1n);
+      await attacker.attack(1n, 2n); // desde el callback del acuerdo 1 intenta reclamar el 2
+
+      // aca checks-effects-interactions no alcanza: el acuerdo 2 tiene saldo, solo lo frena el guard
+      expect(await hookError()).to.equal("ReentrancyGuardReentrantCall");
+      expect((await vault.getAgreement(2n)).claimedAmount).to.equal(0n);
+      expect(await rtoken.balanceOf(await attacker.getAddress())).to.equal(TOTAL);
     });
   });
 });

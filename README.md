@@ -7,10 +7,15 @@ solo lo devengado linealmente entre `startTime` y `endTime`, con un cliff opcion
 
 Universidad ORT Uruguay — Taller de Tecnologías 2 (78500) — Grupo M6C.
 
+## Enlaces
+
+- Repositorio Git (código completo: contratos, frontend, tests y scripts): https://github.com/franjiji/obliBlockchain
+- Video de demostración (máx. 8 minutos): **PENDIENTE: pegar aquí el enlace al video**
+
 ## Integrantes
 
 - Francisco Castelli (322738)
-- Matías González (completar número de estudiante)
+- Matías González (325417)
 
 ## Estructura
 
@@ -32,6 +37,7 @@ docs/        Documento de arquitectura, declaración de uso de IA y letra
 ```bash
 npm install                      # contratos: Hardhat 3 + OpenZeppelin
 cd frontend && npm install       # dApp: React + Vite + ethers
+cd ..                            # volver a la raíz del proyecto
 ```
 
 ## Desplegar contratos
@@ -93,6 +99,8 @@ El script `advance-time.js` es exclusivo de la red local.
    ```bash
    # PowerShell
    $env:SEGUNDOS=3600; npx hardhat run scripts/advance-time.js --network localhost
+   # bash
+   SEGUNDOS=3600 npx hardhat run scripts/advance-time.js --network localhost
    ```
 
 ## Correr tests y coverage
@@ -101,6 +109,8 @@ El script `advance-time.js` es exclusivo de la red local.
 npx hardhat test              # compila y corre los tests
 npx hardhat test --coverage   # tests + reporte de cobertura de líneas
 ```
+
+Resultado actual: 43 tests; cobertura de líneas de 100 % en `VestingPayroll.sol` y 99,05 % en total (con los mocks).
 
 ## Documentación
 

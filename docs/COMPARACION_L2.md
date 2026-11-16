@@ -74,13 +74,19 @@ Mint y claimAfterCancel son preparacion/limpieza; los despliegues se muestran po
 
 En esta muestra el flujo costo 0.000988268 ETH en Sepolia y 0.000002022865720833 ETH
 en Base Sepolia. Base fue 488.55 veces mas barata, con un ahorro de 99.80 %.
-La L2 ejecuta fuera de Ethereum y reparte/comprime los datos publicados a L1 entre muchas
-transacciones. Eso permite pagar menos ETH aunque los contratos hagan un trabajo EVM similar;
-el cargo de datos L1 no debe omitirse al comparar.
+Con el mismo bytecode, el gas usado no fue igual en las dos redes: en el flujo vario hasta
+3.99x (createAgreement: 707405 contra 177401 de gas) y en el despliegue de VestingPayroll
+6.94x. No se comprobo la causa transaccion por transaccion (lo medido son los recibos).
+Sepolia activo el 6/10/2026 la actualizacion Glamsterdam, que incluye EIP-8037: encarece y mide
+aparte el gas por crear estado nuevo (desplegar contratos, escribir slots nuevos). Coincide con
+que lo que mas subio fueron los despliegues y createAgreement, y mucho menos claim y cancel.
+Como ejecucion = gas usado x precio del gas, la diferencia del flujo se separa en dos factores:
+el precio del gas fue 166.67x menor en Base (1.0 contra 0.006 gwei) y se uso 2.931x menos gas
+(988268 contra 337144). Multiplicando los dos factores (166.67 x 2.931) se obtiene aprox.
+488.5x; el total medido, con el cargo L1 de Base incluido, es 488.55x. Ese cargo no debe omitirse.
 
 Es una sola muestra en testnets: precios, demanda, prioridad y reglas de gas pueden diferir
-entre redes y variar con el tiempo. El gas usado tambien difiere en esta muestra: no se
-supuso que ambas redes cobrarian la misma cantidad de gas. Los resultados no son una cotizacion de mainnet ni una
+entre redes y variar con el tiempo. Los resultados no son una cotizacion de mainnet ni una
 garantia de ahorro futuro. Un menor costo permite reclamos mas frecuentes, pero introduce
 dependencia del secuenciador y diferencias de finalidad/puentes. El fondeo mediante el puente
 se registra aparte en `docs/mediciones/fondeo-base.json` y no se suma a cada operacion del protocolo.
@@ -89,7 +95,7 @@ se registra aparte en `docs/mediciones/fondeo-base.json` y no se suma a cada ope
 
 1. Instalar dependencias y completar .env con SEPOLIA_RPC_URL, BASE_SEPOLIA_RPC_URL y
    DEPLOYER_PRIVATE_KEY de una cuenta de prueba. Fondear esa cuenta en ambas redes.
-2. Ejecutar `npx hardhat test` (35 pruebas).
+2. Ejecutar `npx hardhat test` (43 pruebas; cobertura de lineas 100 % en VestingPayroll.sol y 99.05 % en total).
 3. Ejecutar `npx hardhat run scripts/deploy.js --network sepolia` y luego
    `npx hardhat run scripts/deploy.js --network baseSepolia`.
 4. Ejecutar `npx hardhat run scripts/medir-costos.js --network sepolia` y luego
@@ -107,3 +113,5 @@ La dApp elige los contratos segun la red de la billetera (ver README); los regis
 - [Cargos de red de Base](https://docs.base.org/specifications/transactions/network-fees).
 - [Fees de OP Stack, incluyendo cargo de operador](https://docs.optimism.io/op-stack/transactions/fees).
 - [Contratos oficiales del puente](https://docs.base.org/specifications/reference/base-contracts).
+- [Glamsterdam en testnets, incluye EIP-8037](https://blog.ethereum.org/2026/09/17/glamsterdam-testnet-announcement).
+- [EIP-8037: aumento del gas por crear estado](https://eips.ethereum.org/EIPS/eip-8037).

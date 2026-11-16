@@ -55,7 +55,7 @@ export default function Detail({ id, onBack }) {
     <div className="card">
       <button onClick={onBack}>← Volver</button>
       <h2>
-        Acuerdo #{String(r.id)} <Badge status={r.status} />
+        Acuerdo #{String(r.id)} <Badge status={r.status} ended={r.now >= r.end} />
       </h2>
 
       <dl className="grid">
