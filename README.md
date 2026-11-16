@@ -24,7 +24,7 @@ contracts/   Smart contracts (Solidity)
 test/        Tests de los contratos
 scripts/     Scripts de deploy y utilidades
 frontend/    dApp (React + Vite + ethers)
-docs/        Documento de arquitectura, declaración de uso de IA y letra
+docs/        Despliegues y mediciones de costos (desafío D)
 ```
 
 ## Requisitos
@@ -114,8 +114,6 @@ Resultado actual: 43 tests; cobertura de líneas de 100 % en `VestingPayroll.sol
 
 ## Documentación
 
-- [Arquitectura](docs/ARQUITECTURA.md)
-- [Declaración de uso de IA](docs/DECLARACION_IA.md)
+- Documento de arquitectura en PDF, con la declaración de uso de IA en la sección 8.2: incluido en el ZIP de la entrega
 - [Despliegue actualizado en Sepolia con cliff](docs/DESPLIEGUE_SEPOLIA.md)
 - [Comparacion real de costos Sepolia vs Base Sepolia](docs/COMPARACION_L2.md)
-- [Letra del obligatorio](docs/letra-obligatorio.md)
