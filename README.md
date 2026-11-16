@@ -35,10 +35,15 @@ docs/        Despliegues y mediciones de costos (desafío D)
 ## Instalación
 
 ```bash
+git clone https://github.com/franjiji/obliBlockchain.git
+cd obliBlockchain
 npm install                      # contratos: Hardhat 3 + OpenZeppelin
-cd frontend && npm install       # dApp: React + Vite + ethers
+cd frontend
+npm install                      # dApp: React + Vite + ethers
 cd ..                            # volver a la raíz del proyecto
 ```
+
+La primera vez que se compila, Hardhat descarga el compilador solc 0.8.28 (requiere conexión a internet).
 
 ## Desplegar contratos
 
@@ -56,13 +61,13 @@ El script imprime las direcciones, regala 100.000 mUSD a las primeras 5 cuentas 
 escribe `frontend/src/contracts/` (direcciones y ABI) para que la dApp los use.
 **Hay que volver a desplegar cada vez que se reinicia `npx hardhat node`.**
 
-### Sepolia y Base Sepolia (desafio D)
+### Sepolia y Base Sepolia (desafío D)
 
 Completar `.env` a partir de `.env.example` con `SEPOLIA_RPC_URL`,
 `BASE_SEPOLIA_RPC_URL` y `DEPLOYER_PRIVATE_KEY` de una cuenta exclusiva de pruebas.
-La configuracion carga `.env` automaticamente; nunca se sube a Git.
+La configuración carga `.env` automáticamente; nunca se sube a Git.
 La cuenta necesita ETH de prueba en cada red. `ETHERSCAN_API_KEY` no es necesaria
-para desplegar, solo para publicar/verificar codigo fuente en un explorador.
+para desplegar, solo para publicar/verificar código fuente en un explorador.
 
 ```bash
 npx hardhat run scripts/deploy.js --network sepolia
@@ -72,18 +77,18 @@ npx hardhat run scripts/medir-costos.js --network baseSepolia
 node scripts/generar-comparacion.js
 ```
 
-Los despliegues publicos no reparten tokens automaticamente. Los scripts conservan
-un registro publico por red en `docs/despliegues/` y `docs/mediciones/` para reanudar
+Los despliegues públicos no reparten tokens automáticamente. Los scripts conservan
+un registro público por red en `docs/despliegues/` y `docs/mediciones/` para reanudar
 sin repetir transacciones confirmadas. El mismo archivo de parametros se usa en ambas redes.
 Para una muestra nueva, archivar primero todos los registros de la muestra anterior.
 
-**Usar la dApp en Sepolia:** los contratos ya desplegados estan en
+**Usar la dApp en Sepolia:** los contratos ya desplegados están en
 `frontend/src/contracts/deployment.sepolia.json` (direcciones en
-[DESPLIEGUE_SEPOLIA.md](docs/DESPLIEGUE_SEPOLIA.md)). La dApp elige los contratos segun la red
+[DESPLIEGUE_SEPOLIA.md](docs/DESPLIEGUE_SEPOLIA.md)). La dApp elige los contratos según la red
 de la billetera: con MetaMask en Sepolia usa los de Sepolia (no hace falta ejecutar el deploy) y
 con MetaMask en Hardhat Local usa los que genera `scripts/deploy.js` en `deployment.json`.
-Si la red no esta soportada, la dApp ofrece cambiar a una de las dos. Base Sepolia (chain ID `84532`)
-solo se uso para medir costos (ver [COMPARACION_L2.md](docs/COMPARACION_L2.md)).
+Si la red no está soportada, la dApp ofrece cambiar a una de las dos. Base Sepolia (chain ID `84532`)
+solo se usó para medir costos (ver [COMPARACION_L2.md](docs/COMPARACION_L2.md)).
 El script `advance-time.js` es exclusivo de la red local.
 
 ## Ejecutar la dApp
@@ -98,7 +103,13 @@ El script `advance-time.js` es exclusivo de la red local.
 3. Para probar el devengado sin esperar, adelantá el reloj de la cadena:
    ```bash
    # PowerShell
-   $env:SEGUNDOS=3600; npx hardhat run scripts/advance-time.js --network localhost
+   $env:SEGUNDOS=3600
+   npx hardhat run scripts/advance-time.js --network localhost
+
+   # cmd
+   set SEGUNDOS=3600
+   npx hardhat run scripts/advance-time.js --network localhost
+
    # bash
    SEGUNDOS=3600 npx hardhat run scripts/advance-time.js --network localhost
    ```
@@ -116,4 +127,4 @@ Resultado actual: 43 tests; cobertura de líneas de 100 % en `VestingPayroll.sol
 
 - Documento de arquitectura en PDF, con la declaración de uso de IA en la sección 8.2: incluido en el ZIP de la entrega
 - [Despliegue actualizado en Sepolia con cliff](docs/DESPLIEGUE_SEPOLIA.md)
-- [Comparacion real de costos Sepolia vs Base Sepolia](docs/COMPARACION_L2.md)
+- [Comparación real de costos Sepolia vs Base Sepolia](docs/COMPARACION_L2.md)
