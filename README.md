@@ -10,7 +10,7 @@ Universidad ORT Uruguay — Taller de Tecnologías 2 (78500) — Grupo M6C.
 ## Enlaces
 
 - Repositorio Git (código completo: contratos, frontend, tests y scripts): https://github.com/franjiji/obliBlockchain
-- Video de demostración (máx. 8 minutos): **PENDIENTE: pegar aquí el enlace al video**
+- Video de demostración (máx. 8 minutos): https://www.youtube.com/watch?v=8NeOR1RWOFg
 
 ## Integrantes
 
